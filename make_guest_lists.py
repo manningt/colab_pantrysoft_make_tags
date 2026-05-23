@@ -46,7 +46,7 @@ friday_split_report_hour = 15
 #    'Friday-before-3': (12, 15),
 #    'Friday-after-3': (15, 23)}
 
-class PICKUP_LIST_IDX_E(enum.Enum): 
+class GUEST_LIST_IDX_E(enum.Enum): 
    Friday_before_3 = 0
    Friday_after_3 = 1
    Saturday = 2
@@ -55,7 +55,7 @@ class PICKUP_LIST_IDX_E(enum.Enum):
 def get_visits():
    token = load_token()
 
-   guest_list = [[],[],[],[]]
+   guest_lists = [[],[],[],[]]
 
    page_number = 1
    record_limit = 2
@@ -85,31 +85,36 @@ def get_visits():
       item_count = 0
       for item_dict in visit_dict['inventory_visit_items']:
          item_count += item_dict['quantity']
-      if visit_dict['visit_type'] is 'Pickup':
-         date_str, time_str = visit_dict['visit_datetime'].split(' ')
-         client_tuple = (visit_dict['client_id'], None, time_str, item_count)
-         guest_list_index = None
-         if date_str == this_weeks_dates[FRIDAY_IDX]:
-            if time_str[:2] < friday_split_report_hour:
-               guest_list_index = PICKUP_LIST_IDX_E.Friday_before_3.value
-            else:
-               guest_list_index = PICKUP_LIST_IDX_E.Friday_after_3.value
-         elif date_str == this_weeks_dates[SATURDAY_IDX]:
-            guest_list_index = PICKUP_LIST_IDX_E.Saturday.value
-         else:
-            print(f"date out-of-range: {visit_dict['visit_datetime']=}  {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
-      elif visit_dict['visit_type'] is 'Delivery':
+      # print(f"{visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['visit_type']=} {visit_dict['client_id']=} {item_count=}")
+
+      guest_list_index = None
+      if visit_dict['visit_type'] == 'Delivery':
          # visit date_time is the delivery route
          client_tuple = (visit_dict['client_id'], None, visit_dict['visit_datetime'], item_count)
-         guest_list_index = PICKUP_LIST_IDX_E.Delivery.value
+         guest_list_index = GUEST_LIST_IDX_E.Delivery.value
+      elif visit_dict['visit_type'] == 'Pickup':
+         date_str, time_str = visit_dict['visit_datetime'].split(' ')
+         client_tuple = (visit_dict['client_id'], None, time_str, item_count)
+         if date_str == this_weeks_dates[FRIDAY_IDX]:
+            if time_str[:2] < friday_split_report_hour:
+               guest_list_index = GUEST_LIST_IDX_E.Friday_before_3.value
+            else:
+               guest_list_index = GUEST_LIST_IDX_E.Friday_after_3.value
+         elif date_str == this_weeks_dates[SATURDAY_IDX]:
+            guest_list_index = GUEST_LIST_IDX_E.Saturday.value
+         else:
+            print(f"date out-of-range: {visit_dict['visit_datetime']=}  {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
       else:
          print(f"Unknown visit_type: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
 
       if guest_list_index:
-         guest_list[guest_list_index].append(client_tuple)
+         guest_lists[guest_list_index].append(client_tuple)
 
-      # print(f"{visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['visit_type']=} {visit_dict['client_id']=} {item_count=}")
-
+   for list_idx, guest_list in enumerate(guest_lists):
+      # guest_list.sort(key=lambda x: (x[2], x[0]))
+      print(f"{GUEST_LIST_IDX_E(list_idx).name}")
+      for idx, guest in enumerate(guest_list):
+         print(f"\t{idx} {guest}")
 
 
 if __name__ == "__main__":
