@@ -9,10 +9,11 @@
 the 4 lists are: 
   Delivery, 'Saturday': (7, 12), 'Friday-before-3': (12, 15), 'Friday-after-3': (15, 23)}
       where each list is:
-        tuples with the guest's first name, last name, route or pickup time, and item count.
+        tuples with the guest's first name, last name, route or pickup time, and item count
 
 make 4 interim lists, where the list is a tuple: clientID, none, route or pickup time, and item count.
-   then go and replace ClientID with first name, and None with Last Name
+   then go and replace ClientID with first name, and None with Last Name, e.g.
+      guest_list.append((row['First'], row['Last'], row['Route or Pickup Time'], item_count))
 
 '''
 from datetime import time
@@ -39,7 +40,7 @@ def load_token(config_path=CONFIG_FILE):
 
 FRIDAY_IDX = 0
 SATURDAY_IDX = 1
-friday_split_report_hour = 15
+FRIDAY_SPLIT_REPORT_HOUR = 3
 
 class GUEST_LIST_IDX_E(enum.Enum): 
    Friday_before_3 = 0
@@ -49,28 +50,44 @@ class GUEST_LIST_IDX_E(enum.Enum):
 
 def parse_visit_response(response_data, guest_lists, this_weeks_dates):
    done = False #only True when we hit a date out of range
+   record_count = 0
+   added_count = 0
    for visit_dict in response_data:
+      guest_list_index = None
+      record_count += 1
       item_count = 0
       for item_dict in visit_dict['inventory_visit_items']:
          item_count += item_dict['quantity']
       # print(f"{visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['visit_type']=} {visit_dict['client_id']=} {item_count=}")
 
-      guest_list_index = None
+      if item_count == 0:
+         print(f"visit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
+         continue
+
       if visit_dict['visit_type'] == 'Delivery':
-         # visit date_time is the delivery route
-         client_tuple = (visit_dict['client_id'], None, visit_dict['visit_datetime'], item_count)
+         # the delivery route (3rd parameter) is grabbed later using the client_id
+         client_tuple = (visit_dict['client_id'], None, None, item_count)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
          date_str, time_str = visit_dict['visit_datetime'].split(' ')
-         client_tuple = (visit_dict['client_id'], None, time_str, item_count)
-         if date_str == this_weeks_dates[FRIDAY_IDX]:
-            try:
-               pickup_hour = int(time_str[:2])
-            except ValueError:
-               print(f"time string not an integer: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
-               exit()
+         hour_str, minute_str, _ = time_str.split(':')
+         try:
+            pickup_hour = int(hour_str)
+            pickup_minute = int(minute_str)
+         except ValueError:
+            print(f"time string not an integer: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
+            exit()
 
-            if pickup_hour < friday_split_report_hour:
+         pickup_hour += 2 # adjust from Mountain Time to Eastern Time
+         am_pm = "AM"
+         if pickup_hour > 12:
+            pickup_hour -= 12
+            am_pm = "PM"
+         pickup_time_str = f"{pickup_hour:02d}:{pickup_minute:02d} {am_pm}"
+
+         client_tuple = (visit_dict['client_id'], None, pickup_time_str, item_count)
+         if date_str == this_weeks_dates[FRIDAY_IDX]:
+            if pickup_hour < FRIDAY_SPLIT_REPORT_HOUR:
                guest_list_index = GUEST_LIST_IDX_E.Friday_before_3.value
             else:
                guest_list_index = GUEST_LIST_IDX_E.Friday_after_3.value
@@ -83,9 +100,14 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates):
       else:
          print(f"Unknown visit_type: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
 
-      if guest_list_index:
+      if guest_list_index is not None:
          guest_lists[guest_list_index].append(client_tuple)
+         added_count += 1
+      else:
+         print(f"guest list index is None: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
 
+   if record_count != added_count:
+      print(f"parse visits results {record_count=} {added_count=} {done=}")
    return done, guest_lists
 
 def get_visits(guest_lists, this_weeks_dates, token):
@@ -115,11 +137,10 @@ def get_visits(guest_lists, this_weeks_dates, token):
 
       response_list = response.json()
       # next_page = response_list['next_page']
-      # print(f"{next_page=}")
 
       done, guest_lists = parse_visit_response(response_list['data'], guest_lists, this_weeks_dates)
       if 1: 
-         print(f"{page_number=} {done=} list_lengths: ", end="")
+         print(f"{page_number=} list_lengths: ", end="")
          for guest_list_index in GUEST_LIST_IDX_E:
             print(f"{guest_list_index.name}={len(guest_lists[guest_list_index.value])} ", end="")
          print()
@@ -134,7 +155,8 @@ if __name__ == "__main__":
    guest_lists = [[],[],[],[]]
    guest_lists = get_visits(guest_lists, this_weeks_dates, token)
 
-   if True:
+   PRINT_LISTS = True
+   if PRINT_LISTS:
       for list_idx, guest_list in enumerate(guest_lists):
          # guest_list.sort(key=lambda x: (x[2], x[0]))
          print(f"{GUEST_LIST_IDX_E(list_idx).name}")
