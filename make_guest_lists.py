@@ -39,12 +39,7 @@ def load_token(config_path=CONFIG_FILE):
 
 FRIDAY_IDX = 0
 SATURDAY_IDX = 1
-this_weeks_dates = ["2026-05-22", "2026-05-23"]
 friday_split_report_hour = 15
-# timeslots_dict = {
-#    'Saturday': (7, 12),
-#    'Friday-before-3': (12, 15),
-#    'Friday-after-3': (15, 23)}
 
 class GUEST_LIST_IDX_E(enum.Enum): 
    Friday_before_3 = 0
@@ -52,36 +47,9 @@ class GUEST_LIST_IDX_E(enum.Enum):
    Saturday = 2
    Delivery = 3
 
-def get_visits():
-   token = load_token()
-
-   guest_lists = [[],[],[],[]]
-
-   page_number = 1
-   record_limit = 2
-   url = "https://app.pantrysoft.com/api/v1/visit/"
-   params = {
-      "page": page_number,
-      "limit": record_limit,
-      "sort": "visitDatetime",
-      "order": "DESC",
-      "aggregates": "false"
-   }
-   headers = {
-      "accept": "application/json",
-      "X-Auth-Token": token
-   }
-
-   response = requests.get(url, headers=headers, params=params)
-   
-   if response.status_code != 200:
-      print(f"Request failed with status code {response.status_code}")
-      print(response.text)
-      exit()
-
-   response_list = response.json()
-   next_page = response_list['next_page']
-   for visit_dict in response_list['data']:
+def parse_visit_response(response_data, guest_lists, this_weeks_dates):
+   done = False #only True when we hit a date out of range
+   for visit_dict in response_data:
       item_count = 0
       for item_dict in visit_dict['inventory_visit_items']:
          item_count += item_dict['quantity']
@@ -96,26 +64,79 @@ def get_visits():
          date_str, time_str = visit_dict['visit_datetime'].split(' ')
          client_tuple = (visit_dict['client_id'], None, time_str, item_count)
          if date_str == this_weeks_dates[FRIDAY_IDX]:
-            if time_str[:2] < friday_split_report_hour:
+            try:
+               pickup_hour = int(time_str[:2])
+            except ValueError:
+               print(f"time string not an integer: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
+               exit()
+
+            if pickup_hour < friday_split_report_hour:
                guest_list_index = GUEST_LIST_IDX_E.Friday_before_3.value
             else:
                guest_list_index = GUEST_LIST_IDX_E.Friday_after_3.value
          elif date_str == this_weeks_dates[SATURDAY_IDX]:
             guest_list_index = GUEST_LIST_IDX_E.Saturday.value
          else:
-            print(f"date out-of-range: {visit_dict['visit_datetime']=}  {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
+            print(f"date out-of-range: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
+            done = True
+            break
       else:
          print(f"Unknown visit_type: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
 
       if guest_list_index:
          guest_lists[guest_list_index].append(client_tuple)
 
-   for list_idx, guest_list in enumerate(guest_lists):
-      # guest_list.sort(key=lambda x: (x[2], x[0]))
-      print(f"{GUEST_LIST_IDX_E(list_idx).name}")
-      for idx, guest in enumerate(guest_list):
-         print(f"\t{idx} {guest}")
+   return done, guest_lists
 
+def get_visits(guest_lists, this_weeks_dates, token):
+
+   RECORD_LIMIT = 50
+   MAX_PAGE_NUMBER = 10
+
+   url = "https://app.pantrysoft.com/api/v1/visit/"
+   params = {
+     "limit": RECORD_LIMIT,
+      "sort": "visitDatetime",
+      "order": "DESC",
+      "aggregates": "false"
+   }
+   headers = {
+      "accept": "application/json",
+      "X-Auth-Token": token
+   }
+
+   for page_number in range(1, MAX_PAGE_NUMBER):
+      params["page"] = page_number
+      response = requests.get(url, headers=headers, params=params)
+      if response.status_code != 200:
+         print(f"Request failed with status code {response.status_code}")
+         print(response.text)
+         exit()
+
+      response_list = response.json()
+      # next_page = response_list['next_page']
+      # print(f"{next_page=}")
+
+      done, guest_lists = parse_visit_response(response_list['data'], guest_lists, this_weeks_dates)
+      if 1: 
+         print(f"{page_number=} {done=} list_lengths: ", end="")
+         for guest_list_index in GUEST_LIST_IDX_E:
+            print(f"{guest_list_index.name}={len(guest_lists[guest_list_index.value])} ", end="")
+         print()
+      if done:
+         break
+
+   return guest_lists
 
 if __name__ == "__main__":
-    get_visits()
+   token = load_token()
+   this_weeks_dates = ["2026-05-22", "2026-05-23"]
+   guest_lists = [[],[],[],[]]
+   guest_lists = get_visits(guest_lists, this_weeks_dates, token)
+
+   if True:
+      for list_idx, guest_list in enumerate(guest_lists):
+         # guest_list.sort(key=lambda x: (x[2], x[0]))
+         print(f"{GUEST_LIST_IDX_E(list_idx).name}")
+         for idx, guest in enumerate(guest_list):
+            print(f"\t{idx} {guest}")
