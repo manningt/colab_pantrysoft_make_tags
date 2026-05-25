@@ -149,8 +149,72 @@ def get_visits(guest_lists, this_weeks_dates, token):
 
    return guest_lists
 
+def parse_client_response(response_list, client_info_dict):
+   record_count = 0
+   added_count = 0
+   for individual_client_dict in response_list:
+      record_count += 1
+      client_id = individual_client_dict['id']
+      if record_count == 1:
+         print(f"DEBUG {individual_client_dict=}")
+
+      if 'delivery_route_name' in individual_client_dict:
+         delivery_route = individual_client_dict['delivery_route_name']
+      else:
+         delivery_route = 'None'
+
+      if 'household_members' in individual_client_dict:
+         added_count += 1
+         client_info_dict[client_id] =[
+            individual_client_dict['household_members'][0]['first_name'],
+            individual_client_dict['household_members'][0]['last_name'], 
+            delivery_route]
+         if not individual_client_dict['household_members'][0]['is_primary']:
+            print(f"Not is_primary: {client_info_dict[client_id]=}")
+      else:
+         print(f"{client_id=} has no household members")
+
+   if record_count != added_count:
+      print(f"parse clients results {record_count=} {added_count=}")
+   return client_info_dict
+
+def get_client_lists(token, client_info_dict):
+   RECORD_LIMIT = 5
+   MAX_PAGE_NUMBER = 2
+
+   url = "https://app.pantrysoft.com/api/v1/client/"
+   params = {
+     "limit": RECORD_LIMIT,
+      "sort": "id",
+      "order": "ASC",
+      "active_only": "true"
+   }
+   headers = {
+      "accept": "application/json",
+      "X-Auth-Token": token
+   }
+
+   for page_number in range(1, MAX_PAGE_NUMBER):
+      params["page"] = page_number
+      response = requests.get(url, headers=headers, params=params)
+      if response.status_code != 200:
+         print(f"Request failed with status code {response.status_code}")
+         print(response.text)
+         exit()
+
+      response_list = response.json()
+      client_info_dict = parse_client_response(response_list['data'], client_info_dict)
+
+   return client_info_dict
+
 if __name__ == "__main__":
    token = load_token()
+
+   client_info_dict = {}
+   client_info_dict = get_client_lists(token, client_info_dict)
+   print(f"DONE: {client_info_dict=}")
+   exit()
+
    this_weeks_dates = ["2026-05-22", "2026-05-23"]
    guest_lists = [[],[],[],[]]
    guest_lists = get_visits(guest_lists, this_weeks_dates, token)
