@@ -16,7 +16,8 @@ make 4 interim lists, where the list is a tuple: clientID, none, route or pickup
       guest_list.append((row['First'], row['Last'], row['Route or Pickup Time'], item_count))
 
 '''
-from datetime import time
+from datetime import datetime
+import time as unix_time
 import os
 import json
 import requests
@@ -48,7 +49,7 @@ class GUEST_LIST_IDX_E(enum.Enum):
    Saturday = 2
    Delivery = 3
 
-def parse_visit_response(response_data, guest_lists, this_weeks_dates):
+def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_info_dict):
    done = False #only True when we hit a date out of range
    record_count = 0
    added_count = 0
@@ -60,13 +61,19 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates):
          item_count += item_dict['quantity']
       # print(f"{visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['visit_type']=} {visit_dict['client_id']=} {item_count=}")
 
+      item_count = int(item_count)
       if item_count == 0:
          print(f"visit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
          continue
 
+      client_id = visit_dict['client_id']
+      first_name = client_info_dict[client_id][0]
+      last_name = client_info_dict[client_id][1]
+      delivery_route = client_info_dict[client_id][2]
+
       if visit_dict['visit_type'] == 'Delivery':
-         # the delivery route (3rd parameter) is grabbed later using the client_id
-         client_tuple = (visit_dict['client_id'], None, None, item_count)
+         # client_tuple = (visit_dict['client_id'], None, None, item_count)
+         client_tuple = (first_name, last_name, delivery_route, item_count)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
          date_str, time_str = visit_dict['visit_datetime'].split(' ')
@@ -85,7 +92,8 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates):
             am_pm = "PM"
          pickup_time_str = f"{pickup_hour:02d}:{pickup_minute:02d} {am_pm}"
 
-         client_tuple = (visit_dict['client_id'], None, pickup_time_str, int(item_count))
+         # client_tuple = (visit_dict['client_id'], None, pickup_time_str, int(item_count))
+         client_tuple = (first_name, last_name, pickup_time_str, item_count)
          if date_str == this_weeks_dates[FRIDAY_IDX]:
             if pickup_hour < FRIDAY_SPLIT_REPORT_HOUR:
                guest_list_index = GUEST_LIST_IDX_E.Friday_before_3.value
@@ -105,13 +113,19 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates):
          added_count += 1
       else:
          print(f"guest list index is None: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
+   ''' example list before clientId substitution
+   Saturday
+      0 ('1134', None, '10:45 AM', 34)
+      1 ('392', None, '10:30 AM', 37)
+      2 ('905', None, '10:00 AM', 40)
+   '''
 
    if record_count != added_count:
       print(f"Error: parse_visit_response added {added_count} visits but the {record_count=}; {done=}")
    return done, guest_lists
 
 
-def get_visits(guest_lists, this_weeks_dates, token):
+def get_visits(token, guest_lists, this_weeks_dates, client_info_dict):
    RECORD_LIMIT = 50
    MAX_PAGE_NUMBER = 10
 
@@ -127,6 +141,9 @@ def get_visits(guest_lists, this_weeks_dates, token):
       "X-Auth-Token": token
    }
 
+   total_visits = 0
+   start_time = unix_time.time()
+   print('Fetching visit pages', end='', flush=True)
    for page_number in range(1, MAX_PAGE_NUMBER):
       params["page"] = page_number
       response = requests.get(url, headers=headers, params=params)
@@ -138,7 +155,8 @@ def get_visits(guest_lists, this_weeks_dates, token):
       response_list = response.json()
       # next_page = response_list['next_page']
 
-      done, guest_lists = parse_visit_response(response_list['data'], guest_lists, this_weeks_dates)
+      done, guest_lists = parse_visit_response(response_list['data'], guest_lists, this_weeks_dates, client_info_dict)
+      print(' .', end='', flush=True)
       if 0: 
          print(f"{page_number=} list_lengths: ", end="")
          for guest_list_index in GUEST_LIST_IDX_E:
@@ -146,7 +164,14 @@ def get_visits(guest_lists, this_weeks_dates, token):
          print()
 
       if done:
-         break
+          break
+
+   elapsed_time =  unix_time.time() - start_time
+   average_time_per_page = page_number/elapsed_time
+   for guest_list_index in GUEST_LIST_IDX_E:
+      total_visits += len(guest_lists[guest_list_index.value])
+   print(f' done: {total_visits} visits retrieved in {elapsed_time:.2f} seconds; average_per_page={average_time_per_page:.2f}', flush=True)
+
    return guest_lists
 
 def parse_client_response(response_list, client_info_dict):
@@ -197,6 +222,8 @@ def get_client_lists(token):
       "X-Auth-Token": token
    }
 
+   start_time = unix_time.time()
+   print('Fetching client pages', end='', flush=True)
    for page_number in range(1, MAX_PAGE_NUMBER):
       params["page"] = page_number
       response = requests.get(url, headers=headers, params=params)
@@ -207,47 +234,68 @@ def get_client_lists(token):
 
       response_list = response.json()
       client_info_dict, clients_added_count = parse_client_response(response_list['data'], client_info_dict)
+      print(' .', end='', flush=True)
       if clients_added_count < RECORD_LIMIT:
+         elapsed_time = unix_time.time() - start_time
+         average_time_per_page = page_number/elapsed_time
+         print(f' done: {len(client_info_dict)} active guests retrieved in {elapsed_time:.2f} seconds; average_per_page={average_time_per_page:.2f}', flush=True)
          break
 
    return client_info_dict
 
 if __name__ == "__main__":
    token = load_token()
+   TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
 
-   # the following dictionary is use to fill in the Last, First and Delivery Route when the guest_lists are generated
-   client_info_dict = get_client_lists(token)
-   MINIMUM_CLIENT_COUNT = 60
-   if len(client_info_dict) < MINIMUM_CLIENT_COUNT:
-      print(f"Error: number of clients is less than {MINIMUM_CLIENT_COUNT}")
-      exit()
-   print(f"DEBUG: {len(client_info_dict)} active clients found")
+   # the client_info_dict is use to fill in the Last, First and Delivery Route when the guest_lists are generated
    #client_info_dict={'1': ['Cindy', 'Walsh', '04 - JSM'], '2': ['Linda', 'Webb', '20 - Quaker'],
-   exit()
 
-   this_weeks_dates = ["2026-06-26", "2026-06-27"]
+   if not os.path.isfile(TEMPORARY_CLIENT_LIST_FILENAME):
+      client_info_dict = get_client_lists(token)
+      MINIMUM_CLIENT_COUNT = 60
+      if len(client_info_dict) < MINIMUM_CLIENT_COUNT:
+         print(f"Error: number of clients is less than {MINIMUM_CLIENT_COUNT}")
+         exit()
+      with open(TEMPORARY_CLIENT_LIST_FILENAME, "w") as fp:
+         json.dump(client_info_dict , fp)
+   else:
+      with open(TEMPORARY_CLIENT_LIST_FILENAME, "r") as fp:
+         client_info_dict = json.load(fp)
+      print(f'Using saved guest file {TEMPORARY_CLIENT_LIST_FILENAME} which has {len(client_info_dict)} guests', flush=True)
+
+   # if run autonomously, check that it's Thursday
+   if datetime.now().weekday() != 3:
+      this_weeks_dates = ["2026-06-26", "2026-06-27"]
+      print(f'Warning: using hardcoded dates: {this_weeks_dates}')
+   else:
+      Fridays_date = datetime.today() + datetime.timedelta(days=1)
+      Saturdays_date = datetime.today() + datetime.timedelta(days=2)
+      this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
+
    # the four guest_lists enumerated by GUEST_LIST_IDX_E;  the array is created here and filled in by the function
    guest_lists = [[],[],[],[]]
-   guest_lists = get_visits(guest_lists, this_weeks_dates, token)
+   guest_lists = get_visits(token, guest_lists, this_weeks_dates, client_info_dict)
 
    ''' example list:
-   Saturday
-	0 ('1134', None, '10:45 AM', 34.0)
-	1 ('392', None, '10:30 AM', 37.0)
-	2 ('905', None, '10:00 AM', 40.0)
-	3 ('1299', None, '10:00 AM', 94.0)
-	4 ('1271', None, '09:45 AM', 28.0)
-	5 ('1305', None, '09:30 AM', 25.0)
-	6 ('1273', None, '09:15 AM', 52.0)
+   Friday_before_3
+	   0 ('Timothy', 'Janvrin', '02:50 PM', 34)
+	   1 ('John', 'Crowley', '02:50 PM', 18)
+	   2 ('Denise', 'Logan', '02:50 PM', 27)
+   Friday_after_3
+	   0 ('Dionisio', 'Cruz', '05:00 PM', 53)
+	   1 ('Marie', 'Deuerlein', '04:50 PM', 41)
    '''
 
-   # the pickup lists need to be sorted by last name, first name; the pickup time is not used in the tags
-   # the delivery list needs to be sorted by route, last, first
+   for list_idx, guest_list in enumerate(guest_lists):
+      if list_idx == GUEST_LIST_IDX_E.Delivery.value:
+         guest_list.sort(key=lambda x: (x[2], x[1]))  #sort by delivery_route, last name
+         print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by route")
+      else:
+         guest_list.sort(key=lambda x: (x[1], x[0]))  #sort by last name, first name; pickup time is not used on label
+         print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by last name, first name")
 
-   PRINT_LISTS = False
-   if PRINT_LISTS:
-      for list_idx, guest_list in enumerate(guest_lists):
-         # guest_list.sort(key=lambda x: (x[2], x[0]))
-         print(f"{GUEST_LIST_IDX_E(list_idx).name}")
-         for idx, guest in enumerate(guest_list):
-            print(f"\t{idx} {guest}")
+      PRINT_LISTS = True
+      if PRINT_LISTS:
+            print(f"{GUEST_LIST_IDX_E(list_idx).name}")
+            for idx, guest in enumerate(guest_list):
+               print(f"\t{idx} {guest}")
