@@ -2,7 +2,8 @@
 # /// script
 # requires-python = ">=3.13"
 # dependencies = [
-#   "requests"
+#   "requests",
+#   "fpdf2"
 # ]
 # ///
 '''
@@ -18,10 +19,13 @@ make 4 interim lists, where the list is a tuple: clientID, none, route or pickup
 '''
 from datetime import datetime
 import time as unix_time
-import os
+import os, sys
 import json
 import requests
 import enum
+
+sys.path.append('../pantry_labels')
+from make_labels import make_label_pdfs, write_report_pdf_file
 
 CONFIG_FILE = "my-config.json"
 
@@ -41,12 +45,12 @@ def load_token(config_path=CONFIG_FILE):
 
 FRIDAY_IDX = 0
 SATURDAY_IDX = 1
-FRIDAY_SPLIT_REPORT_HOUR = 3
+FRIDAY_SPLIT_REPORT_HOUR = 3 # the time in the afternoon to split into before/after pickup lists
 
 class GUEST_LIST_IDX_E(enum.Enum): 
-   Friday_before_3 = 0
-   Friday_after_3 = 1
-   Saturday = 2
+   Pickup_Friday_before_3 = 0
+   Pickup_Friday_after_3 = 1
+   Pickup_Saturday = 2
    Delivery = 3
 
 def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_info_dict):
@@ -96,11 +100,11 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_in
          client_tuple = (first_name, last_name, pickup_time_str, item_count)
          if date_str == this_weeks_dates[FRIDAY_IDX]:
             if pickup_hour < FRIDAY_SPLIT_REPORT_HOUR:
-               guest_list_index = GUEST_LIST_IDX_E.Friday_before_3.value
+               guest_list_index = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value
             else:
-               guest_list_index = GUEST_LIST_IDX_E.Friday_after_3.value
+               guest_list_index = GUEST_LIST_IDX_E.Pickup_Friday_after_3.value
          elif date_str == this_weeks_dates[SATURDAY_IDX]:
-            guest_list_index = GUEST_LIST_IDX_E.Saturday.value
+            guest_list_index = GUEST_LIST_IDX_E.Pickup_Saturday.value
          else:
             print(f"date out-of-range: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
             done = True
@@ -126,6 +130,7 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_in
 
 
 def get_visits(token, guest_lists, this_weeks_dates, client_info_dict):
+   # there should be less than 450 visits
    RECORD_LIMIT = 50
    MAX_PAGE_NUMBER = 10
 
@@ -286,16 +291,32 @@ if __name__ == "__main__":
 	   1 ('Marie', 'Deuerlein', '04:50 PM', 41)
    '''
 
+   output_directory = "./output_files"
+   status_strings = []
    for list_idx, guest_list in enumerate(guest_lists):
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
          guest_list.sort(key=lambda x: (x[2], x[1]))  #sort by delivery_route, last name
-         print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by route")
+         type = 'Delivery'
+         # print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by route")
       else:
          guest_list.sort(key=lambda x: (x[1], x[0]))  #sort by last name, first name; pickup time is not used on label
-         print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by last name, first name")
+         # print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by last name, first name")
+         type = 'Pickup'
 
-      PRINT_LISTS = True
-      if PRINT_LISTS:
-            print(f"{GUEST_LIST_IDX_E(list_idx).name}")
-            for idx, guest in enumerate(guest_list):
-               print(f"\t{idx} {guest}")
+      if 0:
+         print(f"{GUEST_LIST_IDX_E(list_idx).name}")
+         for idx, guest in enumerate(guest_list):
+            print(f"\t{idx} {guest}")
+
+      pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
+      status_string = make_label_pdfs(guest_list, type, pdf_filename, output_directory)
+      print(status_string)
+      status_strings.append(status_string)
+      
+   write_report_pdf_file(guest_lists, status_strings, output_directory)
+
+   text_report_path = os.path.join(output_directory, "make_tags_report.txt")
+   with open(text_report_path, "w") as report_file:
+      for line in status_strings:
+         report_file.write(line + "\n")
+
