@@ -67,10 +67,14 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_in
 
       item_count = int(item_count)
       if item_count == 0:
-         print(f"visit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
+         print(f"\nvisit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
          continue
 
       client_id = visit_dict['client_id']
+      if client_id not in client_info_dict:
+         print(f"\n{client_id=} not in client_info, so name lookup failed.")
+         continue
+
       first_name = client_info_dict[client_id][0]
       last_name = client_info_dict[client_id][1]
       delivery_route = client_info_dict[client_id][2]
@@ -270,7 +274,7 @@ if __name__ == "__main__":
 
    # if run autonomously, check that it's Thursday
    if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-06-26", "2026-06-27"]
+      this_weeks_dates = ["2026-07-10", "2026-07-11"]
       print(f'Warning: using hardcoded dates: {this_weeks_dates}')
    else:
       Fridays_date = datetime.today() + datetime.timedelta(days=1)
