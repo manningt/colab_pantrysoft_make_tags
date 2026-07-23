@@ -17,7 +17,7 @@ make 4 interim lists, where the list is a tuple: clientID, none, route or pickup
       guest_list.append((row['First'], row['Last'], row['Route or Pickup Time'], item_count))
 
 '''
-from datetime import datetime
+from datetime import datetime, timedelta
 import time as unix_time
 import os, sys
 import json
@@ -110,8 +110,10 @@ def parse_visit_response(response_data, guest_lists, this_weeks_dates, client_in
          elif date_str == this_weeks_dates[SATURDAY_IDX]:
             guest_list_index = GUEST_LIST_IDX_E.Pickup_Saturday.value
          else:
-            print(f"date out-of-range: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
+            # print(f"date out-of-range: {visit_dict['visit_datetime']=} {visit_dict['id']=} {visit_dict['visit_type']=} {visit_dict['client_id']=}")
             done = True
+            # adjust the record count; the decreasing date limit has been hit and this record wasn't added
+            record_count -= 1
             break
       else:
          print(f"Unknown visit_type: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
@@ -253,6 +255,7 @@ def get_client_lists(token):
    return client_info_dict
 
 if __name__ == "__main__":
+   print(f'Generating report & tag PDFs using PantrySoft API at {datetime.now()}\n')
    token = load_token()
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
 
@@ -277,8 +280,8 @@ if __name__ == "__main__":
       this_weeks_dates = ["2026-07-10", "2026-07-11"]
       print(f'Warning: using hardcoded dates: {this_weeks_dates}')
    else:
-      Fridays_date = datetime.today() + datetime.timedelta(days=1)
-      Saturdays_date = datetime.today() + datetime.timedelta(days=2)
+      Fridays_date = datetime.today() + timedelta(days=1)
+      Saturdays_date = datetime.today() + timedelta(days=2)
       this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
 
    # the four guest_lists enumerated by GUEST_LIST_IDX_E;  the array is created here and filled in by the function
