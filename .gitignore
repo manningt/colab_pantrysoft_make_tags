@@ -1,4 +1,4 @@
 __pycache__/
 examples/
 output_files/
-my-*
+*.json
