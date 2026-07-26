@@ -1,4 +1,4 @@
-#Overview
+# Overview
 The program does the following:
 1. generate the list of clients (guests), where each client has some data (delivery_route, phone, address, etc)
 2. generate a list of visits during the current week (Friday, Saturday).  Assumes the script is run on a Thursday.
@@ -7,4 +7,4 @@ The program does the following:
 5. upload the PDFs to Google Drive: /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags where 20xx is the year, starting with 2026
 6. Print the letter sized PDFs on the Pantry printer.
 
-#Details:
+# Details
