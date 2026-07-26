@@ -79,6 +79,30 @@ def upload_file_to_drive(service, local_file_path, parent_id):
     ).execute()    
     # print(f"  ✓ Uploaded file: {file_name}")
 
+def upload_folder(shared_folder_id, created_folder_name, local_folder_path):
+    upload_ok = True
+    if not os.path.isdir(local_folder_path):
+        print(f'Error: local directory named {local_folder_path} does not exist - not uploading files.')
+        return False
+    try:
+        service = authenticate_drive()
+        created_folder_id = create_drive_folder(service, created_folder_name, shared_folder_id)
+        for (root, dirs, files) in os.walk(local_folder_path):
+            if len(files) == 0:
+                print('No files to upload')
+            else:
+                print(f'Uploading {len(files)} files')
+            for f in files:
+                local_file_path = os.path.join(root, f)
+                upload_file_to_drive(service, local_file_path, created_folder_id)
+        print(f"\n ---- Upload to {created_folder_name} folder finished  ----")
+    #     upload_directory_recursive(service, LOCAL_FOLDER_PATH, SHARED_FOLDER_ID)
+    #     print("\n Upload complete!")
+    except Exception as e:
+        print(f"\nError occurred: {e}")
+        upload_ok = False
+    return upload_ok
+
 '''
 def upload_directory_recursive(service, local_dir_path, drive_parent_id):
     #Recursively uploads a local folder and its contents to Google Drive.
@@ -108,22 +132,7 @@ def upload_directory_recursive(service, local_dir_path, drive_parent_id):
 '''
 
 if __name__ == '__main__':
-    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
     SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
-
-    try:
-        service = authenticate_drive()
-        new_folder_id = create_drive_folder(service, "example", SHARED_FOLDER_ID)
-        for (root, dirs, files) in os.walk(LOCAL_FOLDER_PATH):
-            if len(files) == 0:
-                print('No files to upload')
-            else:
-                print(f'Uploading {len(files)} files')
-            for f in files:
-                local_file_path = os.path.join(root, f)
-                upload_file_to_drive(service, local_file_path, new_folder_id)
-        print("\n ---- Fini  ----")
-    #     upload_directory_recursive(service, LOCAL_FOLDER_PATH, SHARED_FOLDER_ID)
-    #     print("\n Upload complete!")
-    except Exception as e:
-        print(f"\nError occurred: {e}")
+    NEW_FOLDER_NAME = 'example'
+    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
+    upload_folder(SHARED_FOLDER_ID, NEW_FOLDER_NAME, LOCAL_FOLDER_PATH)
