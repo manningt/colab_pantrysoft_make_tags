@@ -9,7 +9,11 @@ def item_count_to_label_count(item_count):
       return 16
    for i in range(len(limits)-1):
       if item_count > limits[i] and item_count <= limits[i+1]:
-         return i + 1
+         # adjust small bag counts for July 30:
+         if i < 4:
+            return i + 2
+         else:
+            return i + 1
 
 
 def make_label_pdfs(guest_list, type, pdf_filename, output_directory="."):
