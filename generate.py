@@ -12,6 +12,7 @@
 
 from upload_folder_to_gdrive import upload_folder
 import os, sys
+import subprocess
 from datetime import datetime, timedelta
 import time as unix_time
 import json
@@ -30,6 +31,26 @@ from google_auth_oauthlib.flow import InstalledAppFlow # pyrefly: ignore [missin
 from googleapiclient.discovery import build # pyrefly: ignore [missing-import]
 from googleapiclient.http import MediaFileUpload # pyrefly: ignore [missing-import]
 
+def print_file(file_path: str, printer_name: str = None, copies: int = 1):
+   # Prints a file using the CUPS/bash 'lp' command.
+   cmd = ["lp"]
+   if printer_name:
+      cmd.extend(["-d", printer_name])
+   if copies > 1:
+      cmd.extend(["-n", str(copies)])
+      cmd.extend(["-o", "collate=true"])
+   cmd.append(file_path)
+
+   try:
+      result = subprocess.run(cmd, check=True, capture_output=True, text=True)
+      print("Success: ", end='')
+      print(result.stdout.strip())
+      
+   except FileNotFoundError:
+      print("Error: The 'lp' command was not found. Ensure CUPS is installed and available in PATH.", file=sys.stderr)
+   except subprocess.CalledProcessError as e:
+      print(f"Printing failed (exit code {e.returncode}):", file=sys.stderr)
+      print(e.stderr.strip(), file=sys.stderr)
 
 if __name__ == "__main__":
    print(f'Generating report & tag PDFs using PantrySoft API at {datetime.now()}\n')
@@ -112,3 +133,4 @@ if __name__ == "__main__":
    upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
 
    # now print
+   print_file('/home/pantry/repos/generate_pantry_PDFs/output/list-of-guests-in-tag-pdf-files.pdf')
