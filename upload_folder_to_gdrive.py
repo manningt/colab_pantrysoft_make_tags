@@ -10,11 +10,11 @@
 # ///
 
 import os
-from google.auth.transport.requests import Request
-from google.oauth2.credentials import Credentials
-from google_auth_oauthlib.flow import InstalledAppFlow
-from googleapiclient.discovery import build
-from googleapiclient.http import MediaFileUpload
+from google.auth.transport.requests import Request  # pyrefly: ignore [missing-import]
+from google.oauth2.credentials import Credentials  # pyrefly: ignore [missing-import]
+from google_auth_oauthlib.flow import InstalledAppFlow  # pyrefly: ignore [missing-import]
+from googleapiclient.discovery import build  # pyrefly: ignore [missing-import]
+from googleapiclient.http import MediaFileUpload  # pyrefly: ignore [missing-import]
 
 # Use drive.file for safety (least privilege needed to create & upload)
 SCOPES = ['https://www.googleapis.com/auth/drive.file']
