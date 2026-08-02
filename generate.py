@@ -10,26 +10,22 @@
 # ]
 # ///
 
-from upload_folder_to_gdrive import upload_folder
 import os, sys
 import subprocess
 from datetime import datetime, timedelta
-import time as unix_time
 import json
-import requests
-import enum
 
 from defines import GUEST_LIST_IDX_E
 
 from get_guests_visits import load_token, get_client_lists, get_visits
 from make_bag_tags_and_report import make_label_pdfs, write_report_pdf_file
-from upload_folder_to_gdrive import authenticate_drive, create_drive_folder, upload_file_to_drive
+from upload_folder_to_gdrive import upload_folder
 
-from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
-from google.oauth2.credentials import Credentials # pyrefly: ignore [missing-import]
-from google_auth_oauthlib.flow import InstalledAppFlow # pyrefly: ignore [missing-import]
-from googleapiclient.discovery import build # pyrefly: ignore [missing-import]
-from googleapiclient.http import MediaFileUpload # pyrefly: ignore [missing-import]
+# from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
+# from google.oauth2.credentials import Credentials # pyrefly: ignore [missing-import]
+# from google_auth_oauthlib.flow import InstalledAppFlow # pyrefly: ignore [missing-import]
+# from googleapiclient.discovery import build # pyrefly: ignore [missing-import]
+# from googleapiclient.http import MediaFileUpload # pyrefly: ignore [missing-import]
 
 def print_file(file_path: str, printer_name: str = None, copies: int = 1):
    # Prints a file using the CUPS/bash 'lp' command.
@@ -55,6 +51,9 @@ def print_file(file_path: str, printer_name: str = None, copies: int = 1):
 if __name__ == "__main__":
    print(f'Generating report & tag PDFs using PantrySoft API at {datetime.now()}\n')
    pantrysoft_token = load_token("my-pantrysoft_token.json")
+
+   LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
+   TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
 
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
 
@@ -118,7 +117,7 @@ if __name__ == "__main__":
       print(status_string)
       status_strings.append(status_string)
       
-   write_report_pdf_file(guest_visit_lists, status_strings, output_directory)
+   write_report_pdf_file(guest_visit_lists, status_strings, output_directory, TAG_PDF_REPORT_FILENAME)
 
    text_report_path = os.path.join(output_directory, "make_tags_report.txt")
    with open(text_report_path, "w") as report_file:
@@ -129,8 +128,8 @@ if __name__ == "__main__":
    print('Uploading generated PDFs to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags')
    SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
    new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
-   LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
    upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
 
    # now print
-   print_file('/home/pantry/repos/generate_pantry_PDFs/output/list-of-guests-in-tag-pdf-files.pdf')
+   tag_pdf_report_path = os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME)
+   print_file(tag_pdf_report_path)

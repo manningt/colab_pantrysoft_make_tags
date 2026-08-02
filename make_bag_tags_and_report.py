@@ -76,9 +76,10 @@ def make_label_pdfs(guest_list, type, pdf_filename, output_directory="."):
 
    return status_string
 
-def write_report_file(guest_list, report_filename, output_directory="."):
+'''  used for testing:
+def write_report_file(guest_list, report_filename, output_directory):
    text_report_filename = report_filename.replace('.pdf', '.txt')
-   text_report_path = os.path.join(output_directory, report_filename.replace('.pdf', '.txt'))
+   text_report_path = os.path.join(output_directory, text_report_filename)
    try:
       with open(text_report_path, "w") as f:
          f.write(f"\n{text_report_filename}\n")
@@ -87,14 +88,14 @@ def write_report_file(guest_list, report_filename, output_directory="."):
             f.write(f"{guest[0]:<12} {guest[1]:<12}   {guest[2]:<20}   Items={guest[3]}\n")
    except Exception as e:
       print(f"Failed to write report file {report_filename}: {e}")  
+'''
 
-def write_report_pdf_file(guest_list_list,  status_list, output_directory="."):
+def write_report_pdf_file(guest_list_list,  status_list, output_directory, tag_pdf_report_filename):
    if len(guest_list_list) == 0:
       print("Failure: no guest lists in request to generate PDF report on tag files.")
       return False
    
-   pdf_report_filename = 'list-of-guests-in-tag-pdf-files.pdf'
-   pdf_report_path = os.path.join(output_directory, pdf_report_filename)
+   pdf_report_path = os.path.join(output_directory, tag_pdf_report_filename)
    try:
       pdf = FPDF(orientation="portrait", unit="pt", format="letter")
    except Exception as e:
