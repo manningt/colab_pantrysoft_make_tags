@@ -90,7 +90,7 @@ def write_report_file(guest_list, report_filename, output_directory):
       print(f"Failed to write report file {report_filename}: {e}")  
 '''
 
-def write_report_pdf_file(guest_list_list,  status_list, output_directory, tag_pdf_report_filename):
+def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pdf_report_filename):
    if len(guest_list_list) == 0:
       print("Failure: no guest lists in request to generate PDF report on tag files.")
       return False

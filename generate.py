@@ -18,7 +18,7 @@ import json
 from defines import GUEST_LIST_IDX_E
 
 from get_guests_visits import load_token, get_client_lists, get_visits
-from make_bag_tags_and_report import make_label_pdfs, write_report_pdf_file
+from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf
 from upload_folder_to_gdrive import upload_folder
 
 # from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
@@ -73,6 +73,7 @@ if __name__ == "__main__":
          client_info_dict = json.load(fp)
       print(f'Using saved guest file {TEMPORARY_CLIENT_LIST_FILENAME} which has {len(client_info_dict)} guests', flush=True)
 
+
    # if run autonomously, check that it's Thursday
    if datetime.now().weekday() != 3:
       this_weeks_dates = ["2026-07-24", "2026-07-25"]
@@ -95,7 +96,6 @@ if __name__ == "__main__":
 	   1 ('Marie', 'Deuerlein', '04:50 PM', 41)
    '''
 
-   output_directory = "./output_files"
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
@@ -113,13 +113,13 @@ if __name__ == "__main__":
             print(f"\t{idx} {guest}")
 
       pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
-      status_string = make_label_pdfs(guest_list, type, pdf_filename, output_directory)
+      status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH)
       print(status_string)
       status_strings.append(status_string)
       
-   write_report_pdf_file(guest_visit_lists, status_strings, output_directory, TAG_PDF_REPORT_FILENAME)
+   write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME)
 
-   text_report_path = os.path.join(output_directory, "make_tags_report.txt")
+   text_report_path = os.path.join(LOCAL_FOLDER_PATH, "make_tags_report.txt")
    with open(text_report_path, "w") as report_file:
       for line in status_strings:
          report_file.write(line + "\n")
