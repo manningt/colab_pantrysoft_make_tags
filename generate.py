@@ -76,7 +76,7 @@ if __name__ == "__main__":
 
    # if run autonomously, check that it's Thursday
    if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-07-24", "2026-07-25"]
+      this_weeks_dates = ["2026-07-31", "2026-08-01"]
       print(f'Warning: using hardcoded dates: {this_weeks_dates}')
    else:
       Fridays_date = datetime.today() + timedelta(days=1)
@@ -86,25 +86,20 @@ if __name__ == "__main__":
    # the four guest_visit_lists enumerated by GUEST_LIST_IDX_E;  the array is created here and filled in by the function
    guest_visit_lists = get_visits(pantrysoft_token, this_weeks_dates, client_info_dict)
 
-   ''' example list:
-   Friday_before_3
-	   0 ('Timothy', 'Janvrin', '02:50 PM', 34)
-	   1 ('John', 'Crowley', '02:50 PM', 18)
-	   2 ('Denise', 'Logan', '02:50 PM', 27)
+   ''' example list
+   example l
+  Friday_before_3
+	   0 (client_id, item_count, pickup_time or None, delivery_route or last_name. last_name or first_name)
    Friday_after_3
-	   0 ('Dionisio', 'Cruz', '05:00 PM', 53)
-	   1 ('Marie', 'Deuerlein', '04:50 PM', 41)
-   '''
 
+   Note: the last 2 items (item 3 & 4) in the row's list are for sorting.
+   '''
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
+      guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name -or- last_name, first_name
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
-         guest_list.sort(key=lambda x: (x[2], x[1]))  #sort by delivery_route, last name
          type = 'Delivery'
-         # print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by route")
       else:
-         guest_list.sort(key=lambda x: (x[1], x[0]))  #sort by last name, first name; pickup time is not used on label
-         # print(f"{list_idx=} {GUEST_LIST_IDX_E(list_idx).name} sorting by last name, first name")
          type = 'Pickup'
 
       if 0:
@@ -113,16 +108,18 @@ if __name__ == "__main__":
             print(f"\t{idx} {guest}")
 
       pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
-      status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH)
+      status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH, client_info_dict)
       print(status_string)
       status_strings.append(status_string)
       
-   write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME)
+   write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME, client_info_dict)
 
    text_report_path = os.path.join(LOCAL_FOLDER_PATH, "make_tags_report.txt")
    with open(text_report_path, "w") as report_file:
       for line in status_strings:
          report_file.write(line + "\n")
+
+   #exit()
 
    # report generation done, now upload to google drive
    print('Uploading generated PDFs to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags')

@@ -2,6 +2,7 @@ import os
 from fpdf import FPDF
 
 from defines import DELIVERY_TYPE, AM_PM_TYPE
+import datetime
 
 def item_count_to_label_count(item_count):
    limits = [0, 9, 17, 25, 32, 40, 49,57,67,73,82,90,100,107,112,139,200]
@@ -9,15 +10,13 @@ def item_count_to_label_count(item_count):
       return 16
    for i in range(len(limits)-1):
       if item_count > limits[i] and item_count <= limits[i+1]:
-         # adjust small bag counts for July 30:
-         if i < 4:
+         # increase small bag counts on odd week numbers
+         if i < 4 and (datetime.datetime.today().isocalendar()[1] % 2):
             return i + 2
          else:
             return i + 1
 
-
-def make_label_pdfs(guest_list, type, pdf_filename, output_directory="."):
-
+def make_label_pdfs(guest_list, type, pdf_filename, output_directory, client_info):
    # PDF writing examples:
    #  https://medium.com/@mahijain9211/creating-a-python-class-for-generating-pdf-tables-from-a-pandas-dataframe-using-fpdf2-c0eb4b88355c
    #  https://py-pdf.github.io/fpdf2/Tutorial.html
@@ -43,21 +42,26 @@ def make_label_pdfs(guest_list, type, pdf_filename, output_directory="."):
          pdf.set_margins(0, 18, 0) #left, top, right in points
          pdf.set_auto_page_break(auto=False)
          pdf.set_font("Helvetica", "B") # Arial not available in fpdf2
-         for row in guest_list:
-            label_count = int(item_count_to_label_count(row[3]))
+         for visit_tuple in guest_list:
+            label_count = int(item_count_to_label_count(visit_tuple[1]))
+            # client_info_dict[client_id] =[first, last, delivery_route, phone, street_address, unit_no, city]
+            client_id = visit_tuple[0]
+            first_name = client_info[client_id][0]
+            last_name = client_info[client_id][1]
             # print(f"  {row[0]} {row[1]} {row[2]} has {row[3]} items, which is {label_count} labels.")
             for i in range(label_count):
                pdf.add_page()
                # if row[2] is a time, then don't print it; only print if it's a route
                if type == DELIVERY_TYPE:
                   pdf.set_font_size(route_font_size)
-                  pdf.cell(cell_width, cell_height, f'{row[2].replace(" - ", ": ")}', align="L")
+                  delivery_route = client_info[client_id][2].replace(" - ", ": ")
+                  pdf.cell(cell_width, cell_height, delivery_route, align="L")
                   pdf.line(0, 36, label_width, 36) # line from left to right
                pdf.ln(route_font_size+10)
                pdf.set_font_size(name_font_size)
-               pdf.cell(cell_width, cell_height, f"{row[0].title()}", align="C")
+               pdf.cell(cell_width, cell_height, f"{first_name.title()}", align="C")
                pdf.ln(name_font_size+4)
-               pdf.cell(cell_width, cell_height, f"{row[1][0:15].title()}", align="C")
+               pdf.cell(cell_width, cell_height, f"{last_name[0:15].title()}", align="C")
                pdf.ln(name_font_size+4)
                pdf.set_font_size(label_count_font_size)
                pdf.cell(cell_width, cell_height, f"{i+1} of {label_count}", align="R")
@@ -90,7 +94,7 @@ def write_report_file(guest_list, report_filename, output_directory):
       print(f"Failed to write report file {report_filename}: {e}")  
 '''
 
-def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pdf_report_filename):
+def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pdf_report_filename, client_info):
    if len(guest_list_list) == 0:
       print("Failure: no guest lists in request to generate PDF report on tag files.")
       return False
@@ -118,7 +122,7 @@ def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pd
       current_row = 0
       guest_list_page_number = 0
       page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page * 2)) + 1
-      # print(f"\t{g_index=} {status_list[g_index]} has {len(guest_list_list[g_index])} guests.")
+      # print(f"\t{g_l_index=} {status_list[g_l_index]} has {len(guest_list_list[g_l_index])} guests.")
       try:
          while current_row < len(guest_list_list[g_l_index]):
             pdf.add_page()
@@ -147,21 +151,144 @@ def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pd
                # make dual data columns
                for _ in range(number_of_rows_on_a_page):
                   row = table.row()
+                  client_id = guest_list_list[g_l_index][current_row][0]
+                  item_count = guest_list_list[g_l_index][current_row][1]
+                  if column_title == 'Time':
+                     time_or_route = guest_list_list[g_l_index][current_row][2]
+                  else:
+                     time_or_route = client_info[client_id][2].replace(" - ", ": ")
+                  first_name = client_info[client_id][0]
+                  last_name = client_info[client_id][1]
                   # first column
-                  row.cell(guest_list_list[g_l_index][current_row][0][:8])
-                  row.cell(guest_list_list[g_l_index][current_row][1][:14])
-                  temp_text = f'{guest_list_list[g_l_index][current_row][2].replace(" - ", ": ")}'
-                  row.cell(temp_text[:7])
-                  row.cell(str(guest_list_list[g_l_index][current_row][3])[:3])
+                  row.cell(first_name[:8])
+                  row.cell(last_name[:14])
+                  row.cell(time_or_route[:7])
+                  row.cell(str(item_count)[:3])
                   row.cell("", border=0)
                   # second column
                   index = current_row + number_of_rows_on_a_page
                   if index < len(guest_list_list[g_l_index]):
-                     row.cell(guest_list_list[g_l_index][index][0][:8])
-                     row.cell(guest_list_list[g_l_index][index][1][:14])
-                     temp_text = f'{guest_list_list[g_l_index][index][2].replace(" - ", ": ")}'
+                     client_id = guest_list_list[g_l_index][index][0]
+                     item_count = guest_list_list[g_l_index][index][1]
+                     if column_title == 'Time':
+                        time_or_route = guest_list_list[g_l_index][index][2]
+                     else:
+                        time_or_route = client_info[client_id][2].replace(" - ", ": ")
+                     first_name = client_info[client_id][0]
+                     last_name = client_info[client_id][1]
+                     row.cell(first_name[:8])
+                     row.cell(last_name[:14])
+                     row.cell(time_or_route[:7])
+                     row.cell(str(item_count)[:3])
+                     # print(f"\t\t{current_row=} {last_name=} {first_name=} {time_or_route=}")
+                  else:
+                     for _ in range(4):
+                        row.cell("", border=0)
+                  current_row += 1
+                  if current_row >= len(guest_list_list[g_l_index]):
+                     # print(f"\t  End of guest list reached at {current_row=}.")
+                     break
+            current_row += number_of_rows_on_a_page # skip to next set of rows
+               
+      except Exception as e:
+         status_string = f"Failure: while making table for {pdf_report_path} exception: {e}"
+         return status_string
+      
+   try:
+      pdf.output(pdf_report_path)
+      # status_string = f"{pdf_report_path} has {len(guest_list)} guests."
+   except Exception as e:
+      #    current_app.logger.warning(f"PDF for {guest} failed: {e}")
+      print(f"failed to generate {pdf_report_path} exception: {e}")
+      return False
+   return True
+
+'''
+def write_expeditor_pdf(guest_list_list, status_list, output_directory, expeditor_pdf_base_filename):
+   if len(guest_list_list) == 0:
+      print("Failure: no guest lists in request to generate PDF report on tag files.")
+      return False
+      
+   #72 points = 1 inch;   42 rows fit on a page   
+   # pdf.set_margins(12, 24, 12) #left, top, right in points
+   center_spacer_width = 52
+   widths = (64, 90, 54, 36, center_spacer_width, 64, 90, 54, 36)
+   number_of_rows_on_a_page = 42
+
+   # print(f"\nGenerating {pdf_report_path}: {len(guest_list_list)} guest lists. {status_list=}")
+   for g_l_index in range(len(guest_list_list)):
+      expeditor_type = status_list[g_l_index]
+
+      try:
+         pdf = FPDF(orientation="landscape", unit="pt", format="letter")
+      except Exception as e:
+         print(f"Failure: could not create PDF for {pdf_report_path} exception: {e}")
+         return False
+
+      pdf.set_margins(12, 24, 12) #left, top, right in points
+      pdf_report_path = os.path.join(output_directory, f'{expeditor_type}{expeditor_pdf_base_filename}')
+
+      if 'Delivery' in status_list[g_l_index]:
+         column_title = 'Route'
+      else:
+         column_title = 'Time'
+      continue # !! TEMPORARY
+
+      current_row = 0
+      guest_list_page_number = 0
+      page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page * 2)) + 1
+      # print(f"\t{g_index=} {status_list[g_index]} has {len(guest_list_list[g_index])} guests.")
+      try:
+         while current_row < len(guest_list_list[g_l_index]):
+            pdf.add_page()
+            guest_list_page_number += 1
+            pdf.set_font("Helvetica", "B")
+            pdf.cell(0,0, f'{status_list[g_l_index]}      Page {guest_list_page_number} of {page_count}', align="L")
+            pdf.ln(pdf.font_size+4)
+            pdf.set_font("Helvetica", "", size=12)
+            with pdf.table(line_height=pdf.font_size, padding=2, width=sum(widths), col_widths=widths) as table:
+               row = table.row()
+               # header row
+               row.cell("Shop")
+               row.cell("Bags")
+               row.cell(column_title)
+               row.cell("First")
+               row.cell("Last")
+               row.cell("Phone")
+               row.cell("", border=0) # spacer
+               if len(guest_list_list[g_l_index]) > number_of_rows_on_a_page:
+                  # only make second column if there is enough data
+                  row.cell("Bags")
+                  row.cell(column_title)
+                  row.cell("First")
+                  row.cell("Last")
+                  row.cell("Phone")
+               else:
+                  for _ in range(4):
+                     row.cell("", border=0)
+               # make dual data columns
+               for _ in range(number_of_rows_on_a_page):
+                  row = table.row()
+                  # first column
+                  # shop, bags route/time, first, last, phone, street, city
+                  row.cell("")
+                  bags = item_count_to_label_count(guest_list_list[g_l_index][current_row][3])[:2]
+                  row.cell(str(bags))
+                  row.cell(guest_list_list[g_l_index][current_row][0][:8])
+                  row.cell(guest_list_list[g_l_index][current_row][1][:14])
+                  temp_text = f'{guest_list_list[g_l_index][current_row][2].replace(" - ", ": ")}'
+                  row.cell(temp_text[:7])
+                  row.cell("", border=0)
+                  # second column
+                  index = current_row + number_of_rows_on_a_page
+                  if index < len(guest_list_list[g_l_index]):
+                     row.cell("")
+                     bags = item_count_to_label_count(guest_list_list[g_l_index][current_row][3])[:2]
+                     row.cell(str(bags))
+                     row.cell(guest_list_list[g_l_index][current_row][0][:8])
+                     row.cell(guest_list_list[g_l_index][current_row][1][:14])
+                     temp_text = f'{guest_list_list[g_l_index][current_row][2].replace(" - ", ": ")}'
                      row.cell(temp_text[:7])
-                     row.cell(str(guest_list_list[g_l_index][index][3])[:3])
                      # print(f"\t\t{i=} {current_row=} {guest_list_list[g_index][current_row][1][:16]=} {guest_list_list[g_index][index][1][:16]=}")
                   else:
                      for _ in range(4):
@@ -184,3 +311,4 @@ def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pd
       print(f"failed to generate {pdf_report_path} exception: {e}")
       return False
    return True
+'''

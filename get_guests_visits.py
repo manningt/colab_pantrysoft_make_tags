@@ -45,9 +45,9 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
       last_name = client_info_dict[client_id][1]
       delivery_route = client_info_dict[client_id][2]
 
+      # the client tuple includes the delivery route (or first name) and last_name for sorting
       if visit_dict['visit_type'] == 'Delivery':
-         # client_tuple = (visit_dict['client_id'], None, None, item_count)
-         client_tuple = (first_name, last_name, delivery_route, item_count)
+         client_tuple = (visit_dict['client_id'], item_count, None, delivery_route, last_name)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
          date_str, time_str = visit_dict['visit_datetime'].split(' ')
@@ -66,8 +66,7 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
             am_pm = "PM"
          pickup_time_str = f"{pickup_hour:02d}:{pickup_minute:02d} {am_pm}"
 
-         # client_tuple = (visit_dict['client_id'], None, pickup_time_str, int(item_count))
-         client_tuple = (first_name, last_name, pickup_time_str, item_count)
+         client_tuple = (visit_dict['client_id'], int(item_count), pickup_time_str, last_name, first_name)
          if date_str == this_weeks_dates[FRIDAY_IDX]:
             if pickup_hour < FRIDAY_SPLIT_REPORT_HOUR:
                guest_list_index = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value
@@ -163,21 +162,41 @@ def parse_client_response(response_list, client_info_dict):
       # if record_count == 1:
       #    print(f"DEBUG {individual_client_dict=}")
 
+      if 'household_members' in individual_client_dict:
+         # [0] is the first household member
+         first = individual_client_dict['household_members'][0]['first_name']
+         last = individual_client_dict['household_members'][0]['last_name']
+         phone = individual_client_dict['household_members'][0]['phone']
+         if not individual_client_dict['household_members'][0]['is_primary']:
+            print(f"Warning: {first} {last} does not have is_primary set: {client_id=}")
+      else:
+         print(f"Error: {client_id=} has no household members")
+         continue
+
       if 'delivery_route_name' in individual_client_dict:
          delivery_route = individual_client_dict['delivery_route_name']
       else:
          delivery_route = 'None'
 
-      if 'household_members' in individual_client_dict:
-         added_count += 1
-         client_info_dict[client_id] =[
-            individual_client_dict['household_members'][0]['first_name'],
-            individual_client_dict['household_members'][0]['last_name'], 
-            delivery_route]
-         if not individual_client_dict['household_members'][0]['is_primary']:
-            print(f"Not is_primary: {client_info_dict[client_id]=}")
+      if 'street_address' in individual_client_dict:
+         street_address = individual_client_dict['street_address']
       else:
-         print(f"{client_id=} has no household members")
+         print(f"Warning: {first} {last} does not have a street address: {client_id=}")
+         street_address = "No Street"
+
+      if 'unit_no' in individual_client_dict:
+         unit_no = individual_client_dict['unit_no']
+      else:
+         unit_no = ""
+
+      if 'city' in individual_client_dict:
+         city = individual_client_dict['city']
+      else:
+         print(f"Warning: {first} {last} does not have a city: {client_id=}")
+         city = 'No City'
+      
+      added_count += 1
+      client_info_dict[client_id] =[first, last, delivery_route, phone, street_address, unit_no, city]
 
    if record_count != added_count:
       print(f"Error: parse_client_response() added {added_count} but there were {record_count} records")
