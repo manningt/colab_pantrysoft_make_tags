@@ -132,5 +132,5 @@ if __name__ == "__main__":
    upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
 
    # now print
-   tag_pdf_report_path = os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME)
-   print_file(tag_pdf_report_path)
+   print_file(os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME))
+   print_file(os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename))
