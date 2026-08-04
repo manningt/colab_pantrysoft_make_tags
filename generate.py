@@ -18,7 +18,7 @@ import json
 from defines import GUEST_LIST_IDX_E
 
 from get_guests_visits import load_token, get_client_lists, get_visits
-from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf
+from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, write_pickup_expeditor_pdf
 from upload_folder_to_gdrive import upload_folder
 
 # from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
@@ -52,11 +52,19 @@ if __name__ == "__main__":
    print(f'Generating report & tag PDFs using PantrySoft API at {datetime.now()}\n')
    pantrysoft_token = load_token("my-pantrysoft_token.json")
 
+   # if run autonomously, check that it's Thursday
+   if datetime.now().weekday() != 3:
+      this_weeks_dates = ["2026-07-31", "2026-08-01"]
+      print(f'Warning: using hardcoded dates: {this_weeks_dates}')
+   else:
+      Fridays_date = datetime.today() + timedelta(days=1)
+      Saturdays_date = datetime.today() + timedelta(days=2)
+      this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
+
    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
    TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
 
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
-
    # the client_info_dict is use to fill in the Last, First and Delivery Route when the guest_lists are generated
    #client_info_dict={'1': ['Cindy', 'Walsh', '04 - JSM'], '2': ['Linda', 'Webb', '20 - Quaker'],
 
@@ -71,29 +79,32 @@ if __name__ == "__main__":
    else:
       with open(TEMPORARY_CLIENT_LIST_FILENAME, "r") as fp:
          client_info_dict = json.load(fp)
-      print(f'Using saved guest file {TEMPORARY_CLIENT_LIST_FILENAME} which has {len(client_info_dict)} guests', flush=True)
+      print(f'Using saved guest/client file {TEMPORARY_CLIENT_LIST_FILENAME} which has {len(client_info_dict)} guests', flush=True)
 
-
-   # if run autonomously, check that it's Thursday
-   if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-07-31", "2026-08-01"]
-      print(f'Warning: using hardcoded dates: {this_weeks_dates}')
-   else:
-      Fridays_date = datetime.today() + timedelta(days=1)
-      Saturdays_date = datetime.today() + timedelta(days=2)
-      this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
-
+   ''' 
    # the four guest_visit_lists enumerated by GUEST_LIST_IDX_E;  the array is created here and filled in by the function
-   guest_visit_lists = get_visits(pantrysoft_token, this_weeks_dates, client_info_dict)
-
-   ''' example list
-   example l
-  Friday_before_3
+   example list
+   Friday_before_3
 	   0 (client_id, item_count, pickup_time or None, delivery_route or last_name. last_name or first_name)
    Friday_after_3
 
    Note: the last 2 items (item 3 & 4) in the row's list are for sorting.
    '''
+
+   TEMPORARY_GUEST_VISIT_LIST_FILENAME = "my-visit-lists.json"
+   if not os.path.isfile(TEMPORARY_GUEST_VISIT_LIST_FILENAME):
+      guest_visit_lists = get_visits(pantrysoft_token, this_weeks_dates, client_info_dict)
+      with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "w") as fp:
+         json.dump(guest_visit_lists , fp)
+   else:
+      with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "r") as fp:
+         guest_visit_lists = json.load(fp)
+      print(f'Using saved guest file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
+
+   pickup_pdf_filename = f'Pickup_expeditor_{this_weeks_dates[0][-5:]}.pdf'
+   write_pickup_expeditor_pdf(guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
+   # exit()
+
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
       guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name -or- last_name, first_name
@@ -101,11 +112,6 @@ if __name__ == "__main__":
          type = 'Delivery'
       else:
          type = 'Pickup'
-
-      if 0:
-         print(f"{GUEST_LIST_IDX_E(list_idx).name}")
-         for idx, guest in enumerate(guest_list):
-            print(f"\t{idx} {guest}")
 
       pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
       status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH, client_info_dict)
@@ -118,8 +124,6 @@ if __name__ == "__main__":
    with open(text_report_path, "w") as report_file:
       for line in status_strings:
          report_file.write(line + "\n")
-
-   #exit()
 
    # report generation done, now upload to google drive
    print('Uploading generated PDFs to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags')
