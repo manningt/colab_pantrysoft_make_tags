@@ -102,16 +102,23 @@ if __name__ == "__main__":
       print(f'Using saved guest file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
 
    pickup_pdf_filename = f'Pickup_expeditor_{this_weeks_dates[0][-5:]}.pdf'
+   for list_idx, guest_list in enumerate(guest_visit_lists):
+      if list_idx == GUEST_LIST_IDX_E.Delivery.value:
+         guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name 
+      else:
+         guest_list.sort(key=lambda x: (x[2], x[3]))  #sort by time and last_name for the pickup report
    write_pickup_expeditor_pdf(guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
+
    # exit()
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
-      guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name -or- last_name, first_name
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
          type = 'Delivery'
+         # already sorted by delivery_route & last name
       else:
          type = 'Pickup'
+         guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by last_name, first_name
 
       pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
       status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH, client_info_dict)

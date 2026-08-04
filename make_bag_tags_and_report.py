@@ -226,13 +226,13 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
    pdf.set_margins(side_margins, 24, side_margins) #left, top, right in points
    printable_pixels = (8.5*72)-(2*side_margins)
    #72 points = 1 inch;  page minus margins is 596 pixels wide
-   number_of_rows_on_a_page = 38
+   number_of_rows_on_a_page = 20
    center_spacer_width = 20
-   header = ["Bags", "Time", "First", "Last", "Phone"]
-   bag_width = 34
-   route_time_width = 35
+   header = ["Bag", "Time", "First", "Last", "Phone"]
+   bag_width = 30
+   route_time_width = 38
    first_name_width = 60
-   last_name_width = 66
+   last_name_width = 72
    phone_width = 78
    widths = (bag_width, route_time_width, first_name_width, last_name_width, phone_width, \
       center_spacer_width, bag_width, route_time_width, first_name_width, last_name_width, phone_width)
@@ -251,7 +251,7 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
          while current_row < len(guest_list_list[g_l_index]):
             pdf.add_page()
             guest_list_page_number += 1
-            pdf.set_font("Helvetica", "B")
+            pdf.set_font("Helvetica", "B", size=11)
             if g_l_index == GUEST_LIST_IDX_E.Pickup_Saturday.value:
                date_str = this_weeks_date[1][-4:]
             else:
@@ -260,7 +260,7 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
             pdf.ln(pdf.font_size+4)
             pdf.set_font("Helvetica", "", size=12)
 
-            with pdf.table(line_height=pdf.font_size, padding=2, width=sum(widths), col_widths=widths) as table:
+            with pdf.table(line_height=24, padding=1, width=sum(widths), col_widths=widths) as table:
                pdf_table_row = table.row()
                # header row
                for column_title in header:
@@ -279,34 +279,42 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
                   pdf_table_row = table.row()
                   # first column
                   # bags, route/time, first, last, phone, street, city
-                  item_count = guest_list_list[g_l_index][current_row][1]
-                  bags = str(item_count_to_label_count(item_count))
+                  # item_count = guest_list_list[g_l_index][current_row][1]
+                  # bags = str(item_count_to_label_count(item_count))
                   client_id = guest_list_list[g_l_index][current_row][0]
                   pickup_time = guest_list_list[g_l_index][current_row][2][:5]
-                  first_name = client_info[client_id][0]
-                  last_name = client_info[client_id][1]
+                  first_name = client_info[client_id][0].title()[:8]
+                  last_name = client_info[client_id][1].title()[:16]
                   phone = normalize_phone_number(client_info[client_id][3])
                   # first column
-                  pdf_table_row.cell(bags, align="R")
+                  pdf_table_row.cell("") #bags, align="R")
+                  pdf.set_font("Helvetica", "", size=14)
                   pdf_table_row.cell(pickup_time)
-                  pdf_table_row.cell(first_name[:8])
-                  pdf_table_row.cell(last_name[:10])
+                  pdf.set_font("Helvetica", "", size=12)
+                  pdf_table_row.cell(first_name)
+                  pdf.set_font("Helvetica", "", size=14)
+                  pdf_table_row.cell(last_name)
+                  pdf.set_font("Helvetica", "", size=12)
                   pdf_table_row.cell(phone)
                   # second column
                   index = current_row + number_of_rows_on_a_page
                   if index < len(guest_list_list[g_l_index]):
-                     item_count = guest_list_list[g_l_index][index][1]
-                     bags = str(item_count_to_label_count(item_count))
+                     # item_count = guest_list_list[g_l_index][index][1]
+                     # bags = str(item_count_to_label_count(item_count))
                      client_id = guest_list_list[g_l_index][index][0]
                      pickup_time = guest_list_list[g_l_index][index][2][:5]
-                     first_name = client_info[client_id][0]
-                     last_name = client_info[client_id][1]
+                     first_name = client_info[client_id][0].title()[:8]
+                     last_name = client_info[client_id][1].title()[:16]
                      phone = normalize_phone_number(client_info[client_id][3])
                      pdf_table_row.cell("", border=0) #center spacer
-                     pdf_table_row.cell(bags, align="R")
+                     pdf_table_row.cell("") #bags, align="R")
+                     pdf.set_font("Helvetica", "", size=14)
                      pdf_table_row.cell(pickup_time)
-                     pdf_table_row.cell(first_name[:8])
-                     pdf_table_row.cell(last_name[:10])
+                     pdf.set_font("Helvetica", "", size=12)
+                     pdf_table_row.cell(first_name)
+                     pdf.set_font("Helvetica", "", size=14)
+                     pdf_table_row.cell(last_name)
+                     pdf.set_font("Helvetica", "", size=12)
                      pdf_table_row.cell(phone)
                      # print(f"\t\t{index=} {current_row=} {first_name} {last_name}")
                   else:
