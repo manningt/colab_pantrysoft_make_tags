@@ -1,3 +1,4 @@
+from fpdf import graphics_state
 import os
 from fpdf import FPDF
 import copy
@@ -211,7 +212,7 @@ def normalize_phone_number(number):
       print(f"bad phone number: {clean_number}")
    return f'{clean_number[:3]}.{clean_number[3:6]}.{clean_number[6:]}'
 
-def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_filename, client_info, this_weeks_date):
+def write_expeditor_2column_pdf(guest_list_list, output_directory, expeditor_pdf_filename, client_info, this_weeks_date):
    if len(guest_list_list) == 0:
       print("Failure: no guest lists in request to generate PDF report on tag files.")
       return False
@@ -241,8 +242,18 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
 
    # print(f"\nGenerating {pdf_report_path}: {len(guest_list_list)} guest lists.")
    for g_l_index in range(len(guest_list_list)):
-      if g_l_index == GUEST_LIST_IDX_E.Delivery.value:
+      if "deliv" in expeditor_pdf_filename.lower():
+         if g_l_index == GUEST_LIST_IDX_E.Delivery.value:
+            header[1] = "Route"
+            is_delivery = True
+         else:
+            continue
+      elif g_l_index != GUEST_LIST_IDX_E.Delivery.value:
+         is_delivery = False
+      else:
          continue
+
+      print(f'{g_l_index=} {is_delivery=}')
 
       current_row = 0
       guest_list_page_number = 0
@@ -283,14 +294,18 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
                   # item_count = guest_list_list[g_l_index][current_row][1]
                   # bags = str(item_count_to_label_count(item_count))
                   client_id = guest_list_list[g_l_index][current_row][0]
-                  pickup_time = guest_list_list[g_l_index][current_row][2][:5]
+                  if is_delivery:
+                     pickup_time = guest_list_list[g_l_index][current_row][3].replace(' - ',"\n")[:9]
+                  else:
+                     pickup_time = guest_list_list[g_l_index][current_row][2][:5]
                   # using the first name from the guest_list instead of the client because it maybe modified to the delivery_route
                   first_name = guest_list_list[g_l_index][current_row][4][:8] #client_info[client_id][0].title()[:8]
                   last_name = client_info[client_id][1].title()[:16]
                   phone = normalize_phone_number(client_info[client_id][3])
                   # first column
                   pdf_table_row.cell("") #bags, align="R")
-                  pdf.set_font("Helvetica", "", size=14)
+                  if not is_delivery:
+                     pdf.set_font("Helvetica", "", size=14)
                   pdf_table_row.cell(pickup_time)
                   pdf.set_font("Helvetica", "", size=12)
                   pdf_table_row.cell(first_name)
@@ -304,13 +319,17 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
                      # item_count = guest_list_list[g_l_index][index][1]
                      # bags = str(item_count_to_label_count(item_count))
                      client_id = guest_list_list[g_l_index][index][0]
-                     pickup_time = guest_list_list[g_l_index][index][2][:5]
+                     if is_delivery:
+                        pickup_time = guest_list_list[g_l_index][current_row][3].replace(' - ',"\n")[:9]
+                     else:
+                        pickup_time = guest_list_list[g_l_index][index][2][:5]
                      first_name = guest_list_list[g_l_index][index][4][:8] #client_info[client_id][0].title()[:8]
                      last_name = client_info[client_id][1].title()[:16]
                      phone = normalize_phone_number(client_info[client_id][3])
                      pdf_table_row.cell("", border=0) #center spacer
                      pdf_table_row.cell("") #bags, align="R")
-                     pdf.set_font("Helvetica", "", size=14)
+                     if not is_delivery:
+                        pdf.set_font("Helvetica", "", size=14)
                      pdf_table_row.cell(pickup_time)
                      pdf.set_font("Helvetica", "", size=12)
                      pdf_table_row.cell(first_name)
