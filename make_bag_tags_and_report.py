@@ -1,5 +1,6 @@
 import os
 from fpdf import FPDF
+import copy
 
 from defines import DELIVERY_TYPE, GUEST_LIST_IDX_E, AM_PM_TYPE
 import datetime
@@ -283,7 +284,8 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
                   # bags = str(item_count_to_label_count(item_count))
                   client_id = guest_list_list[g_l_index][current_row][0]
                   pickup_time = guest_list_list[g_l_index][current_row][2][:5]
-                  first_name = client_info[client_id][0].title()[:8]
+                  # using the first name from the guest_list instead of the client because it maybe modified to the delivery_route
+                  first_name = guest_list_list[g_l_index][current_row][4][:8] #client_info[client_id][0].title()[:8]
                   last_name = client_info[client_id][1].title()[:16]
                   phone = normalize_phone_number(client_info[client_id][3])
                   # first column
@@ -303,7 +305,7 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
                      # bags = str(item_count_to_label_count(item_count))
                      client_id = guest_list_list[g_l_index][index][0]
                      pickup_time = guest_list_list[g_l_index][index][2][:5]
-                     first_name = client_info[client_id][0].title()[:8]
+                     first_name = guest_list_list[g_l_index][index][4][:8] #client_info[client_id][0].title()[:8]
                      last_name = client_info[client_id][1].title()[:16]
                      phone = normalize_phone_number(client_info[client_id][3])
                      pdf_table_row.cell("", border=0) #center spacer
@@ -338,3 +340,36 @@ def write_pickup_expeditor_pdf(guest_list_list, output_directory, expeditor_pdf_
       print(f"failed to generate {pdf_report_path} exception: {e}")
       return False
    return True
+
+def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
+   # the route_time_tuple specifies which route to match, and what time the pickup is to be
+   # it then returns a modified guest_list_list with the matched route moved to a pickup time
+   mod_guest_list_list = copy.deepcopy(guest_list_list)
+
+   route_to_pickup_guest_list_list = [[],[],[],[]]
+
+   for list_idx, visit in enumerate(mod_guest_list_list[GUEST_LIST_IDX_E.Delivery.value]):
+      for route_tuple in route_time_tuple_list:
+         # test if route of visit is equal to one of the 
+         if route_tuple[0] in visit[3]:
+            moved_visit = copy.deepcopy(visit)
+            moved_visit[2] = route_tuple[1] #add pickup time
+            route = moved_visit[3]
+            moved_visit[3] = moved_visit[4] #move last name
+            moved_visit[4] = route[5:]
+            pickup_hour = int(route_tuple[1][:2])
+            if pickup_hour < 3:
+               append_list_idx = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value              
+            elif pickup_hour < 8:
+               append_list_idx = GUEST_LIST_IDX_E.Pickup_Friday_after_3.value              
+            else:
+               append_list_idx = GUEST_LIST_IDX_E.Pickup_Saturday.value              
+            route_to_pickup_guest_list_list[append_list_idx].append(moved_visit)
+            # print(f'{list_idx=} {visit=} -> {moved_visit=}')
+            del mod_guest_list_list[GUEST_LIST_IDX_E.Delivery.value][list_idx]
+
+   for g_l_index in range(len(guest_list_list)):
+      if len(route_to_pickup_guest_list_list[g_l_index]) > 0:
+         mod_guest_list_list[g_l_index].extend(route_to_pickup_guest_list_list[g_l_index])
+
+   return mod_guest_list_list

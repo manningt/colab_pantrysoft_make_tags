@@ -18,7 +18,8 @@ import json
 from defines import GUEST_LIST_IDX_E
 
 from get_guests_visits import load_token, get_client_lists, get_visits
-from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, write_pickup_expeditor_pdf
+from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, \
+   write_pickup_expeditor_pdf, move_delivery_to_pickup
 from upload_folder_to_gdrive import upload_folder
 
 # from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
@@ -101,13 +102,15 @@ if __name__ == "__main__":
          guest_visit_lists = json.load(fp)
       print(f'Using saved guest file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
 
+   modified_guest_visit_lists = move_delivery_to_pickup(guest_visit_lists,[('Quak','03:45')])
+
    pickup_pdf_filename = f'Pickup_expeditor_{this_weeks_dates[0][-5:]}.pdf'
-   for list_idx, guest_list in enumerate(guest_visit_lists):
+   for list_idx, guest_list in enumerate(modified_guest_visit_lists): #guest_visit_lists):
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
          guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name 
       else:
          guest_list.sort(key=lambda x: (x[2], x[3]))  #sort by time and last_name for the pickup report
-   write_pickup_expeditor_pdf(guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
+   write_pickup_expeditor_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
 
    # exit()
 
