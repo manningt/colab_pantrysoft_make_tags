@@ -88,13 +88,7 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
          added_count += 1
       else:
          print(f"guest list index is None: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
-   ''' example list before clientId substitution
-   Saturday
-      0 ('1134', None, '10:45 AM', 34)
-      1 ('392', None, '10:30 AM', 37)
-      2 ('905', None, '10:00 AM', 40)
-   '''
-
+   
    if record_count != added_count:
       print(f"Error: parse_visit_response added {added_count} visits but the {record_count=}; {done=}")
    return done, guest_visit_lists
