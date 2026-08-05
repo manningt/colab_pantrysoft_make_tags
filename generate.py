@@ -143,4 +143,4 @@ if __name__ == "__main__":
 
    # now print
    print_file(os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME))
-   print_file(os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename))
+   print_file(os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename), copies=5)
