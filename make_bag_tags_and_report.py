@@ -500,3 +500,108 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
       return False
    return True
 
+
+def write_delivery_routes_pdf(guest_list_list, output_directory, expeditor_pdf_filename, client_info, this_weeks_date, routes_to_print):
+   if len(guest_list_list) == 0:
+      print("Failure: no guest lists in request to generate PDF report on tag files.")
+      return False
+
+   pdf_report_path = os.path.join(output_directory, f'{expeditor_pdf_filename}')
+   try:
+      pdf = FPDF(orientation="portrait", unit="pt", format="letter")
+   except Exception as e:
+      print(f"Failure: could not create PDF for {pdf_report_path} exception: {e}")
+      return False
+
+   side_margins = 8
+   pdf.set_margins(side_margins, 24, side_margins) #left, top, right in points
+   printable_pixels = (8.5*72)-(2*side_margins)
+   #72 points = 1 inch;  page minus margins is 596 pixels wide
+   number_of_rows_on_a_page = 24
+   header = ["Bag", "First", "Last", "Street & Unit", "Phone"]
+   bag_width = 30
+   first_name_width = 72
+   last_name_width = 84
+   street_width = 260
+   phone_width = 90
+   widths = (bag_width, first_name_width, last_name_width, street_width, phone_width)
+   # print(f"there are {len(widths)} columns with a total width of {sum(widths)} pixels; should not exceed {printable_pixels} pixels")
+
+   # print(f"\nGenerating {pdf_report_path}: {len(guest_list_list)} guest lists.")
+   for g_l_index in range(len(guest_list_list)):
+      if g_l_index != GUEST_LIST_IDX_E.Delivery.value:
+         continue
+
+      current_row = 0
+      guest_list_page_number = 0
+      # page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page)) + 1
+      # print(f"\t{g_l_index=} {GUEST_LIST_IDX_E(g_l_index).name} has {len(guest_list_list[g_l_index])} guests; will generate {page_count} pages")
+      current_route = "XX"
+      route_guest_count = 0
+      try:
+         while current_row < len(guest_list_list[g_l_index]):
+            this_route = guest_list_list[g_l_index][current_row][3]
+            if this_route[:2] in routes_to_print and this_route[:2] != current_route[:2]:
+               current_route = this_route
+               pdf.add_page()
+               guest_list_page_number += 1
+               pdf.set_font("Helvetica", "B", size=11)
+               date_str = this_weeks_date[0][-4:]
+               pdf.cell(0,0, f'{this_route} for {date_str}       Page {guest_list_page_number}', align="C")
+               pdf.ln(pdf.font_size+4)
+               pdf.set_font("Helvetica", "", size=12)
+
+               with pdf.table(line_height=24, padding=1, width=sum(widths), col_widths=widths) as table:
+                  pdf.set_font("Helvetica", "", size=14)
+                  pdf_table_row = table.row()
+                  for column_title in header:
+                     pdf_table_row.cell(column_title)
+
+                  for _ in range(number_of_rows_on_a_page):
+                     pdf_table_row = table.row()
+                     client_id = guest_list_list[g_l_index][current_row][0]
+                     first_name = client_info[client_id][0].title()[:8]
+                     last_name = client_info[client_id][1].title()[:16]
+                     street_unit = client_info[client_id][4][:40]                  
+                     phone = normalize_phone_number(client_info[client_id][3])
+
+                     pdf_table_row.cell("") #bags, align="R")
+                     pdf_table_row.cell(first_name)
+                     pdf_table_row.cell(last_name)
+                     pdf_table_row.cell(street_unit)
+                     pdf_table_row.cell(phone)
+
+                     route_guest_count += 1
+                     # if current_row < 38:
+                     #    print(f'{current_row} ', end='')
+                     current_row += 1
+                     if guest_list_list[g_l_index][current_row][3][:2] != current_route[:2]:
+                        #leave loop if the route changes
+                        # print(f'\n{current_route=} had {route_guest_count} guests - next route is {guest_list_list[g_l_index][current_row][3]}')
+                        guest_list_page_number = 0
+                        break
+                     if current_row >= len(guest_list_list[g_l_index]):
+                        # print(f"\t  End of guest list reached at {current_row=}.")
+                        break
+                     # the following has to be here to avoid skipping over indexes because there is an increment outside the with
+               # need to adjust current_row at the end of a table NOT SURE WHY
+               current_row -= 1
+               route_guest_count = 0
+            else:
+               current_row += 1
+               current_route = "YY"
+
+               
+      except Exception as e:
+         status_string = f"Failure: while making table for {pdf_report_path} exception: {e}"
+         print(status_string)
+         return status_string
+      
+   try:
+      pdf.output(pdf_report_path)
+   except Exception as e:
+      #    current_app.logger.warning(f"PDF for {guest} failed: {e}")
+      print(f"failed to generate {pdf_report_path} exception: {e}")
+      return False
+   return True
+
