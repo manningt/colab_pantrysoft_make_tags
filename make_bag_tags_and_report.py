@@ -361,6 +361,7 @@ def write_expeditor_2column_pdf(guest_list_list, output_directory, expeditor_pdf
 def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
    # the route_time_tuple specifies which route to match, and what time the pickup is to be
    # it then returns a modified guest_list_list with the matched route moved to a pickup time
+
    mod_guest_list_list = copy.deepcopy(guest_list_list)
 
    route_to_pickup_guest_list_list = [[],[],[],[]]
@@ -389,6 +390,10 @@ def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
       if len(route_to_pickup_guest_list_list[g_l_index]) > 0:
          mod_guest_list_list[g_l_index].extend(route_to_pickup_guest_list_list[g_l_index])
 
+   if 0:
+      for g_l_index in range(len(guest_list_list)):
+         print(f'{GUEST_LIST_IDX_E(g_l_index).name} {len(guest_list_list[g_l_index])=} => {len(mod_guest_list_list[g_l_index])}')
+
    return mod_guest_list_list
 
 
@@ -409,10 +414,9 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
    printable_pixels = (8.5*72)-(2*side_margins)
    #72 points = 1 inch;  page minus margins is 596 pixels wide
    number_of_rows_on_a_page = 24
-   center_spacer_width = 20
    header = ["Bag", "Time", "First", "Last", "Phone"]
    bag_width = 30
-   route_time_width = 120
+   route_time_width = 220
    first_name_width = 72
    last_name_width = 84
    phone_width = 90
@@ -434,7 +438,7 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
 
       current_row = 0
       guest_list_page_number = 0
-      page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page * 2)) + 1
+      page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page)) + 1
       # print(f"\t{g_l_index=} {GUEST_LIST_IDX_E(g_l_index).name} has {len(guest_list_list[g_l_index])} guests; will generate {page_count} pages")
       try:
          while current_row < len(guest_list_list[g_l_index]):
@@ -456,7 +460,6 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
                for column_title in header:
                   pdf_table_row.cell(column_title)
  
-               # make dual data columns
                for _ in range(number_of_rows_on_a_page):
                   pdf_table_row = table.row()
                   # first column
@@ -466,7 +469,7 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
                   client_id = guest_list_list[g_l_index][current_row][0]
                   if is_delivery:
                      route_pickup_time = guest_list_list[g_l_index][current_row][3].replace("   "," ")
-                     route_pickup_time = route_pickup_time.replace("  "," ").replace(" - ",": ")[:16]
+                     route_pickup_time = route_pickup_time.replace("  "," ").replace(" - ",": ")[:28]
                   else:
                      route_pickup_time = guest_list_list[g_l_index][current_row][2][:5]
                   # using the first name from the guest_list instead of the client because it maybe modified to the delivery_route
@@ -479,13 +482,10 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
                   pdf_table_row.cell(first_name)
                   pdf_table_row.cell(last_name)
                   pdf_table_row.cell(phone)
-                  # second column
-                  index = current_row + number_of_rows_on_a_page
                   current_row += 1
                   if current_row >= len(guest_list_list[g_l_index]):
                      # print(f"\t  End of guest list reached at {current_row=}.")
                      break
-            current_row += number_of_rows_on_a_page # skip to next set of rows
                
       except Exception as e:
          status_string = f"Failure: while making table for {pdf_report_path} exception: {e}"
