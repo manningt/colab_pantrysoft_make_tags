@@ -149,6 +149,7 @@ if __name__ == "__main__":
    new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
    upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
 
+   exit()
    # now print
    print_file(os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME))
    print_file(os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename), copies=5)
