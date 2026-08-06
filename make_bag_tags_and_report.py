@@ -516,14 +516,15 @@ def write_delivery_routes_pdf(guest_list_list, output_directory, expeditor_pdf_f
    pdf.set_margins(side_margins, 24, side_margins) #left, top, right in points
    printable_pixels = (8.5*72)-(2*side_margins)
    #72 points = 1 inch;  page minus margins is 596 pixels wide
-   number_of_rows_on_a_page = 24
-   header = ["Bag", "First", "Last", "Street & Unit", "Phone"]
+   number_of_rows_on_a_page = 16
+   header = ["Bag", "First", "Last", "Street", "Unit", "Phone"]
    bag_width = 30
    first_name_width = 72
    last_name_width = 84
-   street_width = 260
+   street_width = 160
+   unit_width = 100
    phone_width = 90
-   widths = (bag_width, first_name_width, last_name_width, street_width, phone_width)
+   widths = (bag_width, first_name_width, last_name_width, street_width, unit_width, phone_width)
    # print(f"there are {len(widths)} columns with a total width of {sum(widths)} pixels; should not exceed {printable_pixels} pixels")
 
    # print(f"\nGenerating {pdf_report_path}: {len(guest_list_list)} guest lists.")
@@ -561,13 +562,15 @@ def write_delivery_routes_pdf(guest_list_list, output_directory, expeditor_pdf_f
                      client_id = guest_list_list[g_l_index][current_row][0]
                      first_name = client_info[client_id][0].title()[:8]
                      last_name = client_info[client_id][1].title()[:16]
-                     street_unit = client_info[client_id][4][:40]                  
+                     street = client_info[client_id][4]             
+                     unit = client_info[client_id][5]            
                      phone = normalize_phone_number(client_info[client_id][3])
 
                      pdf_table_row.cell("") #bags, align="R")
                      pdf_table_row.cell(first_name)
                      pdf_table_row.cell(last_name)
-                     pdf_table_row.cell(street_unit)
+                     pdf_table_row.cell(street)
+                     pdf_table_row.cell(unit)
                      pdf_table_row.cell(phone)
 
                      route_guest_count += 1
