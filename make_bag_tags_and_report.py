@@ -370,11 +370,10 @@ def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
       for route_tuple in route_time_tuple_list:
          # test if route of visit is equal to one of the 
          if route_tuple[0] in visit[3]:
-            moved_visit = copy.deepcopy(visit)
-            moved_visit[2] = route_tuple[1] #add pickup time
-            route = moved_visit[3]
-            moved_visit[3] = moved_visit[4] #move last name
-            moved_visit[4] = route[5:]
+            # client ID, items, pickup time, last, first
+            # it appears that deepcopy coverts the visit from an array to a tuple - so make an array:
+            moved_visit = [visit[0], visit[1], route_tuple[1], visit[4], visit[3][5:]]
+            # print(f'\t{visit}\n\t{moved_visit}')
             pickup_hour = int(route_tuple[1][:2])
             if pickup_hour < 3:
                append_list_idx = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value              
