@@ -66,6 +66,7 @@ if __name__ == "__main__":
    # if not run at 12, must be testing
    if datetime.now().hour != 12:
       test_mode = True
+      print("Using test mode which skips printing")
    else:
       test_mode = False
 
