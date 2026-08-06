@@ -63,8 +63,15 @@ if __name__ == "__main__":
       Saturdays_date = datetime.today() + timedelta(days=2)
       this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
 
+   # if not run at 12, must be testing
+   if datetime.now().hour != 12:
+      test_mode = True
+   else:
+      test_mode = False
+
    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
    TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
+   files_to_print = []
 
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
    # the client_info_dict is use to fill in the Last, First and Delivery Route when the guest_lists are generated
@@ -113,13 +120,16 @@ if __name__ == "__main__":
 
    delivery_pdf_filename = f'Deliveries_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_1column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_pdf_filename, client_info_dict, this_weeks_dates)
+   files_to_print.append((delivery_pdf_filename,3)) #filename & copies tuple
 
    pickup_pdf_filename = f'Pickups_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_2column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
+   files_to_print.append((pickup_pdf_filename,5))
 
    delivery_routes_pdf_filename = f'Deliveries_per_route_{this_weeks_dates[0][-5:]}.pdf'
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
       client_info_dict, this_weeks_dates, ["01", "04", "08", "09", "20"])
+   files_to_print.append((delivery_routes_pdf_filename,2))
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
@@ -136,20 +146,25 @@ if __name__ == "__main__":
       status_strings.append(status_string)
       
    write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME, client_info_dict)
+   files_to_print.append((TAG_PDF_REPORT_FILENAME,1))
 
    text_report_path = os.path.join(LOCAL_FOLDER_PATH, "make_tags_report.txt")
    with open(text_report_path, "w") as report_file:
       for line in status_strings:
          report_file.write(line + "\n")
 
-   # exit()
    # report generation done, now upload to google drive
    print('Uploading generated PDFs to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags')
    SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
    new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
+   if test_mode:
+      new_folder_name += '-test'
    upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
 
-   exit()
    # now print
-   print_file(os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME))
-   print_file(os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename), copies=5)
+   for file_copies_tuple in files_to_print:
+      if test_mode:
+         print(f'Would be ', eol="")
+      print(f'Printing {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
+   if not test_mode:
+      print_file(os.path.join(LOCAL_FOLDER_PATH, file_copies_tuple[0]), copies=file_copies_tuple[1])
