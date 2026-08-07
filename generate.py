@@ -134,18 +134,17 @@ if __name__ == "__main__":
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
+      guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name -or- last_name or first_name
       if list_idx == GUEST_LIST_IDX_E.Delivery.value:
          type = 'Delivery'
-         # already sorted by delivery_route & last name
       else:
          type = 'Pickup'
-         guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by last_name, first_name
 
       pdf_filename = f'tags-for-{GUEST_LIST_IDX_E(list_idx).name}.pdf'
       status_string = make_label_pdfs(guest_list, type, pdf_filename, LOCAL_FOLDER_PATH, client_info_dict)
       print(status_string)
       status_strings.append(status_string)
-      
+
    write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME, client_info_dict)
    files_to_print.append((TAG_PDF_REPORT_FILENAME,1))
 
