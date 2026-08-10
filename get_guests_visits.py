@@ -199,7 +199,7 @@ def parse_client_response(response_list, client_info_dict):
 def get_client_lists(token):
    # as of July 2026, there are about 800 active clients, aka guests
    RECORD_LIMIT = 50
-   MAX_PAGE_NUMBER = 24
+   MAX_PAGE_NUMBER = 30
 
    client_info_dict = {}
 
