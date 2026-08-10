@@ -158,7 +158,7 @@ if __name__ == "__main__":
          report_file.write(line + "\n")
 
    # report generation done, now upload to google drive
-   print('Uploading generated PDFs to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags')
+   print('Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags: ', end="", flush=True)
    SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
    new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
    if test_mode:

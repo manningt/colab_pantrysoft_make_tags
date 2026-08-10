@@ -91,11 +91,11 @@ def upload_folder(shared_folder_id, created_folder_name, local_folder_path):
             if len(files) == 0:
                 print('No files to upload')
             else:
-                print(f'Uploading {len(files)} files')
-            for f in files:
-                local_file_path = os.path.join(root, f)
-                upload_file_to_drive(service, local_file_path, created_folder_id)
-        print(f"\n ---- Upload to {created_folder_name} folder finished  ----")
+                print(f'Uploading {len(files)} files to {created_folder_name}: ', end="")
+                for f in files:
+                    local_file_path = os.path.join(root, f)
+                    upload_file_to_drive(service, local_file_path, created_folder_id)
+                print(f"Fini")
     #     upload_directory_recursive(service, LOCAL_FOLDER_PATH, SHARED_FOLDER_ID)
     #     print("\n Upload complete!")
     except Exception as e:
