@@ -20,6 +20,11 @@ def load_token(config_path):
       raise ValueError(f"Failed to parse configuration file '{config_path}': {e}")
 
 def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, client_info_dict):
+
+   # add priority info by adding an asterisk in front of the guest's last name for those with priority:
+   with open("my-priority.json", "r") as fp:
+      clients_with_priority_list = json.load(fp)
+
    done = False #only True when we hit a date out of range
    record_count = 0
    added_count = 0
@@ -43,6 +48,8 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
 
       first_name = client_info_dict[client_id][0]
       last_name = client_info_dict[client_id][1]
+      if client_id in clients_with_priority_list:
+         last_name = '*' + last_name #causes sort to put them at the beginning
       delivery_route = client_info_dict[client_id][2]
 
       # the client tuple includes the delivery route (or first name) and last_name for sorting
