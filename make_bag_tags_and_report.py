@@ -157,10 +157,13 @@ def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pd
                   item_count = guest_list_list[g_l_index][current_row][1]
                   if column_title == 'Time':
                      time_or_route = guest_list_list[g_l_index][current_row][2]
+                     last_name_index = 3
                   else:
                      time_or_route = client_info[client_id][2].replace(" - ", ": ")
-                  first_name = client_info[client_id][0]
-                  last_name = client_info[client_id][1]
+                     last_name_index = 4
+                  first_name = client_info[client_id][0].title()
+                  # use last name with asterisk instead of: client_info[client_id][1]
+                  last_name = guest_list_list[g_l_index][current_row][last_name_index].title()
                   # first column
                   row.cell(first_name[:8])
                   row.cell(last_name[:14])
@@ -174,10 +177,12 @@ def write_tag_report_pdf(guest_list_list,  status_list, output_directory, tag_pd
                      item_count = guest_list_list[g_l_index][index][1]
                      if column_title == 'Time':
                         time_or_route = guest_list_list[g_l_index][index][2]
+                        last_name_index = 3
                      else:
                         time_or_route = client_info[client_id][2].replace(" - ", ": ")
-                     first_name = client_info[client_id][0]
-                     last_name = client_info[client_id][1]
+                        last_name_index = 4
+                     first_name = client_info[client_id][0].title()
+                     last_name = guest_list_list[g_l_index][index][last_name_index].title()
                      row.cell(first_name[:8])
                      row.cell(last_name[:14])
                      row.cell(time_or_route[:7])
@@ -473,7 +478,8 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
                      route_pickup_time = guest_list_list[g_l_index][current_row][2][:5]
                   # using the first name from the guest_list instead of the client because it maybe modified to the delivery_route
                   first_name = client_info[client_id][0].title()[:8]
-                  last_name = client_info[client_id][1].title()[:16]
+                  # last_name = client_info[client_id][1].title()[:16]
+                  last_name = guest_list_list[g_l_index][current_row][4].title()
                   phone = normalize_phone_number(client_info[client_id][3])
                   # first column
                   pdf_table_row.cell("") #bags, align="R")
