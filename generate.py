@@ -18,6 +18,7 @@ import json
 from defines import GUEST_LIST_IDX_E
 
 from get_guests_visits import load_token, get_client_lists, get_visits
+# from get_registrations import get_registrations, make_priority_landline_lists
 from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, \
    write_expeditor_2column_pdf, move_delivery_to_pickup, write_expeditor_1column_pdf, \
    write_delivery_routes_pdf
@@ -56,7 +57,7 @@ if __name__ == "__main__":
 
    # if run autonomously, check that it's Thursday
    if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-07-31", "2026-08-01"]
+      this_weeks_dates = ["2026-08-07", "2026-08-08"]
       print(f'Warning: using hardcoded dates: {this_weeks_dates}')
    else:
       Fridays_date = datetime.today() + timedelta(days=1)
@@ -71,7 +72,6 @@ if __name__ == "__main__":
       test_mode = False
 
    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
-   TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
    files_to_print = []
 
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
@@ -104,8 +104,11 @@ if __name__ == "__main__":
    TEMPORARY_GUEST_VISIT_LIST_FILENAME = "my-visit-lists.json"
    if not os.path.isfile(TEMPORARY_GUEST_VISIT_LIST_FILENAME):
       guest_visit_lists = get_visits(pantrysoft_token, this_weeks_dates, client_info_dict)
-      with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "w") as fp:
-         json.dump(guest_visit_lists , fp)
+      if len(guest_visit_lists[0]) < 1:
+         print(f"Quiting: no visits found for {this_weeks_dates}")
+      else:
+         with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "w") as fp:
+            json.dump(guest_visit_lists , fp)
    else:
       with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "r") as fp:
          guest_visit_lists = json.load(fp)
@@ -145,6 +148,7 @@ if __name__ == "__main__":
       print(status_string)
       status_strings.append(status_string)
 
+   TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
    write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME, client_info_dict)
    files_to_print.append((TAG_PDF_REPORT_FILENAME,1))
 
