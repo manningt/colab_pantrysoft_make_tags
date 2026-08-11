@@ -48,12 +48,12 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
 
       first_name = client_info_dict[client_id][0]
       last_name = client_info_dict[client_id][1]
-      if client_id in clients_with_priority_list:
-         last_name = '*' + last_name #causes sort to put them at the beginning
       delivery_route = client_info_dict[client_id][2]
 
       # the client tuple includes the delivery route (or first name) and last_name for sorting
       if visit_dict['visit_type'] == 'Delivery':
+         if client_id in clients_with_priority_list:
+            last_name = '*' + last_name #causes sort to put them at the beginning
          client_tuple = (visit_dict['client_id'], item_count, None, delivery_route, last_name)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
