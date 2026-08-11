@@ -15,20 +15,21 @@ import subprocess
 from datetime import datetime, timedelta
 import json
 
-from defines import GUEST_LIST_IDX_E
+from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
+from google.oauth2.credentials import Credentials # pyrefly: ignore [missing-import]
+from google_auth_oauthlib.flow import InstalledAppFlow # pyrefly: ignore [missing-import]
+from googleapiclient.discovery import build # pyrefly: ignore [missing-import]
+from googleapiclient.http import MediaFileUpload # pyrefly: ignore [missing-import]
 
+from defines import GUEST_LIST_IDX_E
 from get_guests_visits import load_token, get_client_lists, get_visits
 # from get_registrations import get_registrations, make_priority_landline_lists
 from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, \
    write_expeditor_2column_pdf, move_delivery_to_pickup, write_expeditor_1column_pdf, \
    write_delivery_routes_pdf
+from make_csv import write_csv
 from upload_folder_to_gdrive import upload_folder
 
-# from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
-# from google.oauth2.credentials import Credentials # pyrefly: ignore [missing-import]
-# from google_auth_oauthlib.flow import InstalledAppFlow # pyrefly: ignore [missing-import]
-# from googleapiclient.discovery import build # pyrefly: ignore [missing-import]
-# from googleapiclient.http import MediaFileUpload # pyrefly: ignore [missing-import]
 
 def print_file(file_path: str, printer_name: str = None, copies: int = 1):
    # Prints a file using the CUPS/bash 'lp' command.
@@ -114,6 +115,7 @@ if __name__ == "__main__":
          guest_visit_lists = json.load(fp)
       print(f'Using saved guest file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
 
+   # some deliveries are picked-up at a certain time, so move them from deliveries to pickup:
    modified_guest_visit_lists = move_delivery_to_pickup(guest_visit_lists,[('Quak','03:45')])
    #sort:
    for list_idx, guest_list in enumerate(modified_guest_visit_lists): #guest_visit_lists):
@@ -121,6 +123,8 @@ if __name__ == "__main__":
          guest_list.sort(key=lambda x: (x[3], x[4]))  #sort by delivery_route, last_name 
       else:
          guest_list.sort(key=lambda x: (x[2], x[3]))  #sort by time and last_name for the pickup report
+
+   write_csv(modified_guest_visit_lists, LOCAL_FOLDER_PATH, f'_{this_weeks_dates[0][-5:]}.csv', client_info_dict)
 
    delivery_pdf_filename = f'Deliveries_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_1column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_pdf_filename, client_info_dict, this_weeks_dates)
