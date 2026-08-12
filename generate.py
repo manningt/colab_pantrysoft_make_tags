@@ -172,7 +172,7 @@ if __name__ == "__main__":
    # now print
    for file_copies_tuple in files_to_print:
       if test_mode:
-         print(f'Would be ', end="")
-      print(f'Printing {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
-   if not test_mode:
-      print_file(os.path.join(LOCAL_FOLDER_PATH, file_copies_tuple[0]), copies=file_copies_tuple[1])
+         print(f'Test mode: skipping printing of {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
+      else:
+         print(f'Printing {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
+         print_file(os.path.join(LOCAL_FOLDER_PATH, file_copies_tuple[0]), copies=file_copies_tuple[1])
