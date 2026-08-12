@@ -1,4 +1,3 @@
-from fpdf import graphics_state
 import os
 from fpdf import FPDF
 import copy
