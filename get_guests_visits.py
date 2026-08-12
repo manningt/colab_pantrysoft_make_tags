@@ -165,8 +165,8 @@ def parse_client_response(response_list, client_info_dict):
 
       if 'household_members' in individual_client_dict:
          # [0] is the first household member
-         first = individual_client_dict['household_members'][0]['first_name']
-         last = individual_client_dict['household_members'][0]['last_name']
+         first = individual_client_dict['household_members'][0]['first_name'].title()
+         last = individual_client_dict['household_members'][0]['last_name'].title()
          phone = individual_client_dict['household_members'][0]['phone']
          if not individual_client_dict['household_members'][0]['is_primary']:
             print(f"Warning: {first} {last} does not have is_primary set: {client_id=}")
