@@ -35,6 +35,10 @@ After uploading the documents, the program queues the expeditor PDFs and the lis
 
 The program is launched by the unix 'cron' utility at 12:16 on Thursdays.  It writes a log of operations to /tmp/make_tags.log
 
+The program is maintained in a [github](https://en.wikipedia.org/wiki/GitHub) repository: https://github.com/manningt/generate_pantry_PDFs
+
+The small computer does not have a monitor or keyboard.  It is accessed using [ssh](https://en.wikipedia.org/wiki/Secure_Shell).  From the pantry's computers using ```ssh username@192.168.1.215```.  The username and password can be obtained from the developer.  It can also be accessed from the internet using [Tailscale](https://en.wikipedia.org/wiki/Tailscale) which provides VPN services.  *Need to set up a Food Pantry account for Tailscale*
+
 # Program Overview
 The program does the following:
 1. generate the list of clients (guests), where each client has some data (delivery_route, phone, address, etc)
