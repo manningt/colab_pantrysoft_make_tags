@@ -370,6 +370,7 @@ def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
 
    route_to_pickup_guest_list_list = [[],[],[],[]]
 
+   list_of_deliveries_to_delete = []
    for list_idx, visit in enumerate(mod_guest_list_list[GUEST_LIST_IDX_E.Delivery.value]):
       for route_tuple in route_time_tuple_list:
          # test if route of visit is equal to one of the 
@@ -377,7 +378,6 @@ def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
             # client ID, items, pickup time, last, first
             # it appears that deepcopy coverts the visit from an array to a tuple - so make an array:
             moved_visit = [visit[0], visit[1], route_tuple[1], visit[4], visit[3][5:]]
-            # print(f'\t{visit}\n\t{moved_visit}')
             pickup_hour = int(route_tuple[1][:2])
             if pickup_hour < 3:
                append_list_idx = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value              
@@ -387,11 +387,14 @@ def move_delivery_to_pickup(guest_list_list, route_time_tuple_list):
                append_list_idx = GUEST_LIST_IDX_E.Pickup_Saturday.value              
             route_to_pickup_guest_list_list[append_list_idx].append(moved_visit)
             # print(f'{list_idx=} {visit=} -> {moved_visit=}')
-            del mod_guest_list_list[GUEST_LIST_IDX_E.Delivery.value][list_idx]
+            list_of_deliveries_to_delete.append(list_idx)
 
    for g_l_index in range(len(guest_list_list)):
       if len(route_to_pickup_guest_list_list[g_l_index]) > 0:
          mod_guest_list_list[g_l_index].extend(route_to_pickup_guest_list_list[g_l_index])
+
+   for visit_idx in reversed(list_of_deliveries_to_delete):
+      del mod_guest_list_list[GUEST_LIST_IDX_E.Delivery.value][visit_idx]
 
    if 0:
       for g_l_index in range(len(guest_list_list)):
