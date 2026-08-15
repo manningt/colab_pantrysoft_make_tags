@@ -10,6 +10,7 @@
 # ]
 # ///
 
+import make_delivery_tally
 import os, sys
 import subprocess
 from datetime import datetime, timedelta
@@ -28,6 +29,7 @@ from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, \
    write_expeditor_2column_pdf, move_delivery_to_pickup, write_expeditor_1column_pdf, \
    write_delivery_routes_pdf
 from make_csv import write_csv
+from make_delivery_tally import write_delivery_tally_csv
 from upload_folder_to_gdrive import upload_folder
 
 
@@ -58,7 +60,7 @@ if __name__ == "__main__":
 
    # if run autonomously, check that it's Thursday
    if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-08-07", "2026-08-08"]
+      this_weeks_dates = ["2026-08-14", "2026-08-15"]
       print(f'Warning: using hardcoded dates: {this_weeks_dates}')
    else:
       Fridays_date = datetime.today() + timedelta(days=1)
@@ -138,6 +140,9 @@ if __name__ == "__main__":
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
       client_info_dict, this_weeks_dates, ["01", "04", "08", "09", "20"])
    files_to_print.append((delivery_routes_pdf_filename,2))
+
+   delivery_tally_csv_filename = f'Delivery_Tally-{this_weeks_dates[0][-5:]}.csv'
+   write_delivery_tally_csv(modified_guest_visit_lists[GUEST_LIST_IDX_E.Delivery.value], LOCAL_FOLDER_PATH, delivery_tally_csv_filename)
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
