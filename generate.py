@@ -130,16 +130,16 @@ if __name__ == "__main__":
 
    delivery_pdf_filename = f'Deliveries_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_1column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_pdf_filename, client_info_dict, this_weeks_dates)
-   files_to_print.append((delivery_pdf_filename,3)) #filename & copies tuple
+   files_to_print.append((delivery_pdf_filename,1)) #filename & copies tuple
 
    pickup_pdf_filename = f'Pickups_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_2column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
-   files_to_print.append((pickup_pdf_filename,5))
+   files_to_print.append((pickup_pdf_filename,1))
 
    delivery_routes_pdf_filename = f'Deliveries_per_route_{this_weeks_dates[0][-5:]}.pdf'
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
       client_info_dict, this_weeks_dates, ["01", "04", "08", "09", "20"])
-   files_to_print.append((delivery_routes_pdf_filename,2))
+   files_to_print.append((delivery_routes_pdf_filename,1))
 
    delivery_tally_csv_filename = f'Delivery_Tally-{this_weeks_dates[0][-5:]}.csv'
    write_delivery_tally_csv(modified_guest_visit_lists[GUEST_LIST_IDX_E.Delivery.value], LOCAL_FOLDER_PATH, delivery_tally_csv_filename)
