@@ -15,9 +15,12 @@ from google.oauth2.credentials import Credentials  # pyrefly: ignore [missing-im
 from google_auth_oauthlib.flow import InstalledAppFlow  # pyrefly: ignore [missing-import]
 from googleapiclient.discovery import build  # pyrefly: ignore [missing-import]
 from googleapiclient.http import MediaFileUpload  # pyrefly: ignore [missing-import]
+from googleapiclient.errors import HttpError  # pyrefly: ignore [missing-import]
+from datetime import datetime
+
 
 # Use drive.file for safety (least privilege needed to create & upload)
-SCOPES = ['https://www.googleapis.com/auth/drive.file']
+SCOPES = ['https://www.googleapis.com/auth/drive.metadata.readonly', 'https://www.googleapis.com/auth/drive.file']
 
 def authenticate_drive():
     token_filename = 'my-google_token.json'
@@ -103,11 +106,53 @@ def upload_folder(shared_folder_id, created_folder_name, local_folder_path):
         upload_ok = False
     return upload_ok
 
+def get_folder_id():
+    return_code = True
+    now = datetime.now()
+    year = now.strftime("%Y")
+    full_month = now.strftime("%B")
+    print(f"{year=} {full_month=}")
+    return return_code
+
+
+def list_folder_contents(folder_id: str):
+    items = []
+    try:
+        service = authenticate_drive()
+
+        # Query filter:
+        # 1. 'folder_id' in parents -> directly inside the specified folder
+        # 2. trashed = false        -> exclude items in the bin/trash
+        query = f"'{folder_id}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false"
+
+        page_token = None
+
+        while True:
+            response = service.files().list(
+                q=query,
+                fields='nextPageToken, files(id, name, mimeType)',
+                spaces='drive',
+                supportsAllDrives=True,
+                includeItemsFromAllDrives=True,
+                pageToken=page_token
+            ).execute()
+
+            items.extend(response.get('files', []))
+            page_token = response.get('nextPageToken')
+            
+            if not page_token:
+                break
+
+    except HttpError as error:
+        print(f"An error occurred: {error}")
+
+    return items
+
 '''
 def upload_directory_recursive(service, local_dir_path, drive_parent_id):
     #Recursively uploads a local folder and its contents to Google Drive.
     dir_name = os.path.basename(os.path.normpath(local_dir_path))
-    print(f"\n📁 Creating target folder on Drive: '{dir_name}'...")
+    print(f"\n Creating target folder on Drive: '{dir_name}'...")
     
     # Create the root folder in Drive
     current_drive_folder_id = create_drive_folder(service, dir_name, drive_parent_id)
@@ -132,7 +177,27 @@ def upload_directory_recursive(service, local_dir_path, drive_parent_id):
 '''
 
 if __name__ == '__main__':
-    SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
+
+    if 0:
+        SHARED_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS
+        #https://drive.google.com/drive/folders/1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz?usp=share_link
+
+        SHARED_FOLDER_ID = '1fe1J4Un0bw3vqtge0tvBu9Nx4JcXT4nu'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026
+        # https://drive.google.com/drive/u/0/folders/1fe1J4Un0bw3vqtge0tvBu9Nx4JcXT4nu
+
+    SHARED_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026
+
+    items = list_folder_contents(SHARED_FOLDER_ID)
+    if len(items) == 0:
+        print("No files or folders found")
+    else:
+        for item in items:
+            item_type = "[FOLDER]" if item['mimeType'] == 'application/vnd.google-apps.folder' else "[FILE]"
+            print(f"{item_type} {item['name']} (ID: {item['id']})")
+
+    exit()
+
+    # SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  #folder ID from Drive URL: Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026 > Tags
     NEW_FOLDER_NAME = 'example'
     LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
     upload_folder(SHARED_FOLDER_ID, NEW_FOLDER_NAME, LOCAL_FOLDER_PATH)
