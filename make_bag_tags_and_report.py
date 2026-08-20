@@ -419,7 +419,7 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
    pdf.set_margins(side_margins, 24, side_margins) #left, top, right in points
    printable_pixels = (8.5*72)-(2*side_margins)
    #72 points = 1 inch;  page minus margins is 596 pixels wide
-   number_of_rows_on_a_page = 24
+   number_of_rows_on_a_page = 22
    header = ["Bag", "Time", "First", "Last", "Phone"]
    bag_width = 30
    route_time_width = 220
