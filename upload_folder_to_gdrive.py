@@ -109,13 +109,55 @@ def upload_folder(local_folder_path, shared_folder_id, created_folder_name = Non
         upload_ok = False
     return upload_ok
 
-def get_folder_id():
-    return_code = True
-    now = datetime.now()
-    year = now.strftime("%Y")
-    full_month = now.strftime("%B")
-    print(f"{year=} {full_month=}")
-    return return_code
+def get_folder_id(top_level_shared_folder, year, month, day):
+    YEAR_IDX = 0
+    MONTH_IDX = 1
+    DAY_IDX = 2
+    
+    folder_ids = [None, None, None]
+    folder_path = ""
+
+    items = list_folder_contents(top_level_shared_folder)
+    for item in items:
+        if item['mimeType'] == 'application/vnd.google-apps.folder' and item['name'] == year:
+            folder_ids[YEAR_IDX] = item['id']
+            # print(f"found folder: {item['name']} (ID: {item['id']})")
+            folder_path += f"{item['name']}"
+            break
+    if not folder_ids[YEAR_IDX]:
+        print("Didn't find year folder")
+        return None
+
+    items = list_folder_contents(folder_ids[YEAR_IDX])
+    for item in items:
+        if item['mimeType'] == 'application/vnd.google-apps.folder' and item['name'].startswith(month):
+            folder_ids[MONTH_IDX] = item['id']
+            # print(f"found folder: {item['name']} (ID: {item['id']})")
+            folder_path += f"/{item['name']}"
+            break
+    if not folder_ids[MONTH_IDX]:
+        print("Didn't find month folder")
+        return None
+
+    items = list_folder_contents(folder_ids[MONTH_IDX])
+    for item in items:
+        if item['mimeType'] == 'application/vnd.google-apps.folder':
+            if not item['name'].startswith(month[:3]):
+                print(f"Wrong month prefix in {month} folder: {item['name']})")
+                continue
+            parsed_folder_name = item['name'].replace('-', ' ').replace('_', ' ').split(" ")
+            if len(parsed_folder_name) != 2:
+                print(f"unrecognized folder name format: {item['name']}")
+                continue
+            if int(parsed_folder_name[1]) == int(day):
+                folder_ids[DAY_IDX] = item['id']
+                # print(f"found folder: {item['name']} (ID: {item['id']})")
+                folder_path += f"/{item['name']}"
+    if not folder_ids[DAY_IDX]:
+        print("Didn't find month-day folder")
+        return None
+
+    return folder_ids[DAY_IDX], folder_path
 
 
 def list_folder_contents(folder_id: str):
@@ -180,6 +222,14 @@ def upload_directory_recursive(service, local_dir_path, drive_parent_id):
 '''
 
 if __name__ == '__main__':
+
+    # now = datetime.now()
+    this_weeks_folder_id, folder_path = get_folder_id('1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz',"2026", "August", "21")
+    if not this_weeks_folder_id:
+        print('error: this weeks folder not found')
+    else:
+        print(f'{folder_path=} {this_weeks_folder_id=}')
+    exit()
 
     if 0:
         SHARED_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS
