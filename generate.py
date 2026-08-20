@@ -172,11 +172,14 @@ if __name__ == "__main__":
       SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
       new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
    print('Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/2026/August: ', end="", flush=True)
-   SHARED_FOLDER_ID = '1uaFGOFn-vurpxopHeiQYmLEIfT1vy-XS'
+   # SHARED_FOLDER_ID = '1uaFGOFn-vurpxopHeiQYmLEIfT1vy-XS'
+   # !TODO: add folder walk to determine if folder exists
+   SHARED_FOLDER_ID = '18jL0tBQAZgKqfNI1kCulbPAYkNYYC22D' #/2026/August/Aug 21
    new_folder_name = datetime.today().strftime('%b-%d') #3-letter month name, day
    if test_mode:
       new_folder_name += '-test'
-   upload_folder(SHARED_FOLDER_ID, new_folder_name, LOCAL_FOLDER_PATH)
+   # upload_folder(LOCAL_FOLDER_PATH, SHARED_FOLDER_ID, new_folder_name) # create folder and upload
+   upload_folder(LOCAL_FOLDER_PATH, SHARED_FOLDER_ID) # upload to folder
 
    # now print
    for file_copies_tuple in files_to_print:

@@ -82,25 +82,28 @@ def upload_file_to_drive(service, local_file_path, parent_id):
     ).execute()    
     # print(f"  ✓ Uploaded file: {file_name}")
 
-def upload_folder(shared_folder_id, created_folder_name, local_folder_path):
+def upload_folder(local_folder_path, shared_folder_id, created_folder_name = None):
     upload_ok = True
     if not os.path.isdir(local_folder_path):
         print(f'Error: local directory named {local_folder_path} does not exist - not uploading files.')
         return False
     try:
         service = authenticate_drive()
-        created_folder_id = create_drive_folder(service, created_folder_name, shared_folder_id)
+        if created_folder_name:
+            folder_id_for_upload = create_drive_folder(service, created_folder_name, shared_folder_id)
+            upload_folder_name = created_folder_name
+        else:
+            folder_id_for_upload = shared_folder_id
+            upload_folder_name = shared_folder_id
         for (root, dirs, files) in os.walk(local_folder_path):
             if len(files) == 0:
                 print('No files to upload')
             else:
-                print(f'Uploading {len(files)} files to {created_folder_name}: ', end="")
+                print(f'Uploading {len(files)} files to {upload_folder_name}: ', end="")
                 for f in files:
                     local_file_path = os.path.join(root, f)
-                    upload_file_to_drive(service, local_file_path, created_folder_id)
+                    upload_file_to_drive(service, local_file_path, folder_id_for_upload)
                 print(f"Fini")
-    #     upload_directory_recursive(service, LOCAL_FOLDER_PATH, SHARED_FOLDER_ID)
-    #     print("\n Upload complete!")
     except Exception as e:
         print(f"\nError occurred: {e}")
         upload_ok = False
