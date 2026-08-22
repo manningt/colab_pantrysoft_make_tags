@@ -1,6 +1,7 @@
 import os
 from fpdf import FPDF
 import copy
+import traceback
 
 from defines import DELIVERY_TYPE, GUEST_LIST_IDX_E, AM_PM_TYPE
 import datetime
@@ -497,6 +498,8 @@ def write_expeditor_1column_pdf(guest_list_list, output_directory, expeditor_pdf
       except Exception as e:
          status_string = f"Failure: while making table for {pdf_report_path} exception: {e}"
          print(status_string)
+         print(traceback.format_exc())
+         exit()
          return status_string
       
    try:
