@@ -19,16 +19,21 @@ def load_token(config_path):
    except (json.JSONDecodeError, KeyError) as e:
       raise ValueError(f"Failed to parse configuration file '{config_path}': {e}")
 
-def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, client_info_dict):
 
-   # add priority info by adding an asterisk in front of the guest's last name for those with priority:
-   with open("my-priority.json", "r") as fp:
-      clients_with_priority_list = json.load(fp)
-
+def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, client_info_dict, clients_with_priority_list):
    done = False #only True when we hit a date out of range
    record_count = 0
    added_count = 0
+   priority_count = 0
    for visit_dict in response_data:
+      client_id = str(visit_dict['client_id'])
+      if client_id not in client_info_dict:
+         # the following would only happen if using an out-of-date my-guests.json file
+         print(f"\nError: {client_id=} not in client_info, so name lookup failed.")
+         print(f"{type(client_id)=} {type(client_info_dict)=} {len(client_info_dict)=} {list(client_info_dict.keys())=}")
+         exit()
+         continue
+
       guest_list_index = None
       record_count += 1
       item_count = 0
@@ -38,12 +43,7 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
 
       item_count = int(item_count)
       if item_count == 0:
-         print(f"\nvisit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
-         continue
-
-      client_id = visit_dict['client_id']
-      if client_id not in client_info_dict:
-         print(f"\n{client_id=} not in client_info, so name lookup failed.")
+         print(f"Warning: visit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
          continue
 
       first_name = client_info_dict[client_id][0]
@@ -54,6 +54,8 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
       if visit_dict['visit_type'] == 'Delivery':
          if client_id in clients_with_priority_list:
             last_name = '*' + last_name #causes sort to put them at the beginning
+            priority_count += 1
+            # print(f"added priority to {last_name}")
          client_tuple = (visit_dict['client_id'], item_count, None, delivery_route, last_name)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
@@ -98,10 +100,15 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
    
    if record_count != added_count:
       print(f"Error: parse_visit_response added {added_count} visits but the {record_count=}; {done=}")
-   return done, guest_visit_lists
+   return done, guest_visit_lists, priority_count
 
 
 def get_visits(token, this_weeks_dates, client_info_dict):
+   # add priority info by adding an asterisk in front of the guest's last name for those with priority:
+   with open("my-priority.json", "r") as fp:
+      clients_with_priority_list = json.load(fp)
+   print(f"\tRead my-priority.json: {len(clients_with_priority_list)} clients with priority")
+
    # the list of lists is created here; the lists are appended to 
    guest_visit_lists = [[],[],[],[]]
 
@@ -122,6 +129,7 @@ def get_visits(token, this_weeks_dates, client_info_dict):
    }
 
    total_visits = 0
+   total_priority_count = 0
    start_time = unix_time.time()
    print('Fetching visit pages', end='', flush=True)
    for page_number in range(1, MAX_PAGE_NUMBER):
@@ -135,7 +143,9 @@ def get_visits(token, this_weeks_dates, client_info_dict):
       response_list = response.json()
       # next_page = response_list['next_page']
 
-      done, guest_visit_lists = parse_visit_response(response_list['data'], guest_visit_lists, this_weeks_dates, client_info_dict)
+      done, guest_visit_lists, parse_priority_count = parse_visit_response(response_list['data'], \
+         guest_visit_lists, this_weeks_dates, client_info_dict, clients_with_priority_list)
+      total_priority_count += parse_priority_count
       print(' .', end='', flush=True)
       if 0: 
          print(f"{page_number=} list_lengths: ", end="")
@@ -150,7 +160,7 @@ def get_visits(token, this_weeks_dates, client_info_dict):
    average_time_per_page = page_number/elapsed_time
    for guest_list_index in GUEST_LIST_IDX_E:
       total_visits += len(guest_visit_lists[guest_list_index.value])
-   print(f' done: {total_visits} visits retrieved in {elapsed_time:.2f} seconds; average_per_page={average_time_per_page:.2f}', flush=True)
+   print(f' done: {total_visits} visits retrieved in {elapsed_time:.2f} seconds; average_per_page={average_time_per_page:.2f}; total_priority={total_priority_count}', flush=True)
 
    return guest_visit_lists
 
@@ -159,7 +169,8 @@ def parse_client_response(response_list, client_info_dict):
    added_count = 0
    for individual_client_dict in response_list:
       record_count += 1
-      client_id = individual_client_dict['id']
+      # convert to ID to string: faster and thats how it's stored in json
+      client_id = str(individual_client_dict['id'])
       # if record_count == 1:
       #    print(f"DEBUG {individual_client_dict=}")
 
