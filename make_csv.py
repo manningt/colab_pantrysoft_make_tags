@@ -14,14 +14,18 @@ def write_csv(guest_list_list, output_directory, csv_base_filename, client_info)
          # visit_tuple pickup:   client_id, item_count, time, last_name, first_name)
          # visit_tuple delivery: client_id, item_count, None, delivery_route, last_name)
          # client_info_dict[client_id] =[first, last, delivery_route, phone, street_address, unit_no, city]
-         client_id = visit_tuple[0]
+         client_id = str(visit_tuple[0])
+         if client_id not in client_info:
+            print(f"Make CSV: Error: {client_id} missing for {visit_tuple=}")
+            continue
          first_name = client_info[client_id][0]
-         last_name = client_info[client_id][1]
          item_count = int(visit_tuple[1])
          label_count = int(item_count_to_label_count(item_count))
          if visit_tuple[2] is not None:
+            last_name = visit_tuple[3]
             pickup_array.append(["",label_count,item_count,first_name,last_name,visit_tuple[2][:5]])
          else:
+            last_name = visit_tuple[4]
             delivery_array.append(["",label_count,item_count,first_name,last_name,visit_tuple[3]])
 
    csv_path = os.path.join(output_directory, "Deliveries" + csv_base_filename)
