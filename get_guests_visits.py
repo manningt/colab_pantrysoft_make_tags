@@ -26,11 +26,11 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
    added_count = 0
    priority_count = 0
    for visit_dict in response_data:
-      client_id = str(visit_dict['client_id'])
-      if client_id not in client_info_dict:
+      client_id_str = str(visit_dict['client_id'])
+      if client_id_str not in client_info_dict:
          # the following would only happen if using an out-of-date my-guests.json file
-         print(f"\nError: {client_id=} not in client_info, so name lookup failed.")
-         print(f"{type(client_id)=} {type(client_info_dict)=} {len(client_info_dict)=} {list(client_info_dict.keys())=}")
+         print(f"\nError: {client_id_str=} not in client_info, so name lookup failed.")
+         print(f"{type(client_id_str)=} {type(client_info_dict)=} {len(client_info_dict)=} {list(client_info_dict.keys())=}")
          exit()
          continue
 
@@ -46,17 +46,17 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
          print(f"Warning: visit has no items: {visit_dict['visit_type']=} {visit_dict['id']=} {visit_dict['visit_datetime']=} {visit_dict['client_id']=}")
          continue
 
-      first_name = client_info_dict[client_id][0]
-      last_name = client_info_dict[client_id][1]
-      delivery_route = client_info_dict[client_id][2]
+      first_name = client_info_dict[client_id_str][0]
+      last_name = client_info_dict[client_id_str][1]
+      delivery_route = client_info_dict[client_id_str][2]
 
       # the client tuple includes the delivery route (or first name) and last_name for sorting
       if visit_dict['visit_type'] == 'Delivery':
-         if client_id in clients_with_priority_list:
+         if client_id_str in clients_with_priority_list:
             last_name = '*' + last_name #causes sort to put them at the beginning
             priority_count += 1
             # print(f"added priority to {last_name}")
-         client_tuple = (visit_dict['client_id'], item_count, None, delivery_route, last_name)
+         client_tuple = (client_id_str, item_count, None, delivery_route, last_name)
          guest_list_index = GUEST_LIST_IDX_E.Delivery.value
       elif visit_dict['visit_type'] == 'Pickup':
          date_str, time_str = visit_dict['visit_datetime'].split(' ')
@@ -75,7 +75,7 @@ def parse_visit_response(response_data, guest_visit_lists, this_weeks_dates, cli
             am_pm = "PM"
          pickup_time_str = f"{pickup_hour:02d}:{pickup_minute:02d} {am_pm}"
 
-         client_tuple = (visit_dict['client_id'], int(item_count), pickup_time_str, last_name, first_name)
+         client_tuple = (client_id_str, int(item_count), pickup_time_str, last_name, first_name)
          if date_str == this_weeks_dates[FRIDAY_IDX]:
             if pickup_hour < FRIDAY_SPLIT_REPORT_HOUR:
                guest_list_index = GUEST_LIST_IDX_E.Pickup_Friday_before_3.value
