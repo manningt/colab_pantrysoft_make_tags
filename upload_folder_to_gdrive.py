@@ -110,12 +110,15 @@ def upload_folder(local_folder_path, shared_folder_id, created_folder_name = Non
     return upload_ok
 
 
-def get_folder_id(top_level_shared_folder, date_list):
+def get_folder_id(top_level_shared_folder, date_list, create_if_not_present=False):
+    # date_list = ["2027", "February", "05"]
     folder_path = ""
     if len(date_list) == 3:
         folder_id = top_level_shared_folder    
         for i in range(3):
+            # print(f"\n{i=}: list_folder_contents for {folder_id=}")
             items = list_folder_contents(folder_id)
+            higher_level_folder_id = folder_id
             folder_id = None
             for item in items:
                 if item['mimeType'] == 'application/vnd.google-apps.folder':
@@ -137,7 +140,18 @@ def get_folder_id(top_level_shared_folder, date_list):
                     break
 
             if not folder_id:
-                print(f"Did not find folder for {date_list[i]} when searching for date: {date_list}")
+                if create_if_not_present:
+                    service = authenticate_drive()
+                    if i < 2:
+                        folder_name_to_create = date_list[i]
+                    else:
+                        folder_name_to_create = f"{date_list[1][:3]} {int(date_list[2])}"
+                    # print(f"Creating {folder_name_to_create}")
+                    folder_id = create_drive_folder(service, folder_name_to_create, higher_level_folder_id)
+                    folder_path += f"{folder_name_to_create}/"
+                else:
+                    print(f"Did not find folder for {date_list[i]} when searching for date: {date_list}")
+                    break
     else:
         print(f"Bad date list: {date_list}")
         folder_id = None
@@ -209,36 +223,49 @@ def upload_directory_recursive(service, local_dir_path, drive_parent_id):
 if __name__ == '__main__':
 
     now = datetime.now()
-    date_list = [now.strftime('%Y'), now.strftime('%B'), now.strftime('%d')]
-    test_date_lists = [['2026', 'September'], ['2026', 'September', '4'], date_list]
-    for i in range (3):
-        this_weeks_folder_id, folder_path = get_folder_id('1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz', test_date_lists[i])
+    PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz' # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS
+
+
+    TEST_CREATE_DATE_FOLDER = True
+    if TEST_CREATE_DATE_FOLDER:
+        date_list = ["2027", "March", "05"]
+        this_weeks_folder_id, folder_path = \
+            get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, date_list, create_if_not_present=True)
         if not this_weeks_folder_id:
             print('error: this weeks folder not found')
         else:
             print(f'{folder_path=} {this_weeks_folder_id=}')
-    exit()
 
-    if 0:
-        SHARED_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS
-        #https://drive.google.com/drive/folders/1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz?usp=share_link
 
-        SHARED_FOLDER_ID = '1fe1J4Un0bw3vqtge0tvBu9Nx4JcXT4nu'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026
-        # https://drive.google.com/drive/u/0/folders/1fe1J4Un0bw3vqtge0tvBu9Nx4JcXT4nu
+    TEST_GET_FOLDER_ID_WITHOUT_CREATE = False
+    if TEST_GET_FOLDER_ID_WITHOUT_CREATE:
+        date_list = [now.strftime('%Y'), now.strftime('%B'), now.strftime('%d')]
+        test_date_lists = [['2026', 'September'], ['2026', 'September', '4'], date_list]
+        for i in range (3):
+            this_weeks_folder_id, folder_path = get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, test_date_lists[i])
+            if not this_weeks_folder_id:
+                print('error: this weeks folder not found')
+            else:
+                print(f'{folder_path=} {this_weeks_folder_id=}')
 
-    SHARED_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026
 
-    items = list_folder_contents(SHARED_FOLDER_ID)
-    if len(items) == 0:
-        print("No files or folders found")
-    else:
-        for item in items:
-            item_type = "[FOLDER]" if item['mimeType'] == 'application/vnd.google-apps.folder' else "[FILE]"
-            print(f"{item_type} {item['name']} (ID: {item['id']})")
+    TEST_LIST_FOLDER_CONTENTS = False
+    if TEST_LIST_FOLDER_CONTENTS:
+        items = list_folder_contents(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID)
+        if len(items) == 0:
+            print("No files or folders found")
+        else:
+            for item in items:
+                item_type = "[FOLDER]" if item['mimeType'] == 'application/vnd.google-apps.folder' else "[FILE]"
+                print(f"{item_type} {item['name']} (ID: {item['id']})")
 
-    exit()
 
-    # SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  #folder ID from Drive URL: Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026 > Tags
-    NEW_FOLDER_NAME = 'example'
-    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
-    upload_folder(SHARED_FOLDER_ID, NEW_FOLDER_NAME, LOCAL_FOLDER_PATH)
+    TEST_UPLOAD_TO_NEW_FOLDER = False
+    if TEST_UPLOAD_TO_NEW_FOLDER:
+        SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  #folder ID from Drive URL: Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026 > Tags
+        NEW_FOLDER_NAME = 'example'
+        LOCAL_FOLDER_PATH = './output_files'  # Path to local folder to upload
+        upload_folder(SHARED_FOLDER_ID, NEW_FOLDER_NAME, LOCAL_FOLDER_PATH)
+
+
+    #SHARED_FOLDER_ID = '1fe1J4Un0bw3vqtge0tvBu9Nx4JcXT4nu'  # Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS > 2026
