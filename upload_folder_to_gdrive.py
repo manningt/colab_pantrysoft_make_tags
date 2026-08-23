@@ -109,7 +109,43 @@ def upload_folder(local_folder_path, shared_folder_id, created_folder_name = Non
         upload_ok = False
     return upload_ok
 
-def get_folder_id(top_level_shared_folder, year, month, day):
+
+def get_folder_id(top_level_shared_folder, date_list):
+    folder_path = ""
+    if len(date_list) == 3:
+        folder_id = top_level_shared_folder    
+        for i in range(3):
+            items = list_folder_contents(folder_id)
+            folder_id = None
+            for item in items:
+                if item['mimeType'] == 'application/vnd.google-apps.folder':
+                    if i < 2 and item['name'] == date_list[i]:
+                        #year, month
+                        folder_id = item['id']
+                        folder_path += f"{item['name']}/"
+                    else:
+                        #separate month and day: month will be [0], day will be [1]
+                        parsed_folder_name = item['name'].replace('-', ' ').replace('_', ' ').split(" ")
+                        # compare 3 characters of month with folder name and integer of day
+                        month_abbrev = date_list[1][:3]
+                        # print(f"{month_abbrev=}")
+                        if parsed_folder_name[0].startswith(month_abbrev) and int(parsed_folder_name[1]) == int(date_list[2]):
+                            folder_id = item['id']
+                            folder_path += f"{item['name']}/"
+                if folder_id:
+                    # print(f"found folder: {item['name']} (ID: {item['id']})")
+                    break
+
+            if not folder_id:
+                print(f"Did not find folder for {date_list[i]} when searching for date: {date_list}")
+    else:
+        print(f"Bad date list: {date_list}")
+        folder_id = None
+
+    return folder_id, folder_path
+
+
+def get_folder_id_old(top_level_shared_folder, year, month, day):
     YEAR_IDX = 0
     MONTH_IDX = 1
     DAY_IDX = 2
@@ -126,7 +162,7 @@ def get_folder_id(top_level_shared_folder, year, month, day):
             break
     if not folder_ids[YEAR_IDX]:
         print("Didn't find year folder")
-        return None
+        return None, None
 
     items = list_folder_contents(folder_ids[YEAR_IDX])
     for item in items:
@@ -137,7 +173,7 @@ def get_folder_id(top_level_shared_folder, year, month, day):
             break
     if not folder_ids[MONTH_IDX]:
         print("Didn't find month folder")
-        return None
+        return None, None
 
     items = list_folder_contents(folder_ids[MONTH_IDX])
     for item in items:
@@ -155,7 +191,7 @@ def get_folder_id(top_level_shared_folder, year, month, day):
                 folder_path += f"/{item['name']}"
     if not folder_ids[DAY_IDX]:
         print("Didn't find month-day folder")
-        return None
+        return None, None
 
     return folder_ids[DAY_IDX], folder_path
 
@@ -223,12 +259,15 @@ def upload_directory_recursive(service, local_dir_path, drive_parent_id):
 
 if __name__ == '__main__':
 
-    # now = datetime.now()
-    this_weeks_folder_id, folder_path = get_folder_id('1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz',"2026", "August", "21")
-    if not this_weeks_folder_id:
-        print('error: this weeks folder not found')
-    else:
-        print(f'{folder_path=} {this_weeks_folder_id=}')
+    now = datetime.now()
+    date_list = [now.strftime('%Y'), now.strftime('%B'), now.strftime('%d')]
+    test_date_lists = [['2026', 'September'], ['2026', 'September', '4'], date_list]
+    for i in range (3):
+        this_weeks_folder_id, folder_path = get_folder_id('1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz', test_date_lists[i])
+        if not this_weeks_folder_id:
+            print('error: this weeks folder not found')
+        else:
+            print(f'{folder_path=} {this_weeks_folder_id=}')
     exit()
 
     if 0:
