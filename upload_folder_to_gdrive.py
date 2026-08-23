@@ -145,57 +145,6 @@ def get_folder_id(top_level_shared_folder, date_list):
     return folder_id, folder_path
 
 
-def get_folder_id_old(top_level_shared_folder, year, month, day):
-    YEAR_IDX = 0
-    MONTH_IDX = 1
-    DAY_IDX = 2
-    
-    folder_ids = [None, None, None]
-    folder_path = ""
-
-    items = list_folder_contents(top_level_shared_folder)
-    for item in items:
-        if item['mimeType'] == 'application/vnd.google-apps.folder' and item['name'] == year:
-            folder_ids[YEAR_IDX] = item['id']
-            # print(f"found folder: {item['name']} (ID: {item['id']})")
-            folder_path += f"{item['name']}"
-            break
-    if not folder_ids[YEAR_IDX]:
-        print("Didn't find year folder")
-        return None, None
-
-    items = list_folder_contents(folder_ids[YEAR_IDX])
-    for item in items:
-        if item['mimeType'] == 'application/vnd.google-apps.folder' and item['name'].startswith(month):
-            folder_ids[MONTH_IDX] = item['id']
-            # print(f"found folder: {item['name']} (ID: {item['id']})")
-            folder_path += f"/{item['name']}"
-            break
-    if not folder_ids[MONTH_IDX]:
-        print("Didn't find month folder")
-        return None, None
-
-    items = list_folder_contents(folder_ids[MONTH_IDX])
-    for item in items:
-        if item['mimeType'] == 'application/vnd.google-apps.folder':
-            if not item['name'].startswith(month[:3]):
-                print(f"Wrong month prefix in {month} folder: {item['name']})")
-                continue
-            parsed_folder_name = item['name'].replace('-', ' ').replace('_', ' ').split(" ")
-            if len(parsed_folder_name) != 2:
-                print(f"unrecognized folder name format: {item['name']}")
-                continue
-            if int(parsed_folder_name[1]) == int(day):
-                folder_ids[DAY_IDX] = item['id']
-                # print(f"found folder: {item['name']} (ID: {item['id']})")
-                folder_path += f"/{item['name']}"
-    if not folder_ids[DAY_IDX]:
-        print("Didn't find month-day folder")
-        return None, None
-
-    return folder_ids[DAY_IDX], folder_path
-
-
 def list_folder_contents(folder_id: str):
     items = []
     try:
