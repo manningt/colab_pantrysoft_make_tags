@@ -10,10 +10,10 @@
 # ]
 # ///
 
-import make_delivery_tally
 import os, sys
 import subprocess
 from datetime import datetime, timedelta
+from calendar import month_name
 import json
 
 from google.auth.transport.requests import Request # pyrefly: ignore [missing-import]
@@ -30,7 +30,7 @@ from make_bag_tags_and_report import make_label_pdfs, write_tag_report_pdf, \
    write_delivery_routes_pdf
 from make_csv import write_csv
 from make_delivery_tally import write_delivery_tally_csv
-from upload_folder_to_gdrive import upload_folder
+from upload_folder_to_gdrive import upload_folder, get_folder_id
 
 
 def print_file(file_path: str, printer_name: str = None, copies: int = 1):
@@ -55,24 +55,40 @@ def print_file(file_path: str, printer_name: str = None, copies: int = 1):
       print(e.stderr.strip(), file=sys.stderr)
 
 if __name__ == "__main__":
-   print(f'Generating report & tag PDFs using PantrySoft API at {datetime.now()}\n')
-   pantrysoft_token = load_token("my-pantrysoft_token.json")
+   now = datetime.now()
+   print(f'Generating report & tag PDFs using PantrySoft API at {now}')
 
    # if run autonomously, check that it's Thursday
-   if datetime.now().weekday() != 3:
-      this_weeks_dates = ["2026-08-14", "2026-08-15"]
-      print(f'Warning: using hardcoded dates: {this_weeks_dates}')
+   if now.weekday() != 3:
+      this_weeks_dates = ["2026-08-21", "2026-08-22"]
+      print(f'\tWarning: using hardcoded dates: {this_weeks_dates}')
    else:
-      Fridays_date = datetime.today() + timedelta(days=1)
-      Saturdays_date = datetime.today() + timedelta(days=2)
+      Fridays_date = now + timedelta(days=1)
+      Saturdays_date = now + timedelta(days=2)
       this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
 
+   gdrive_folder_path_list = this_weeks_dates[0].split("-")
+   gdrive_folder_path_list[1] = month_name[int(gdrive_folder_path_list[1])] #get name from month number
+   PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'
+   this_weeks_folder_id, this_weeks_folder_path = \
+      get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, gdrive_folder_path_list)
+   # print(f"{this_weeks_folder_id=} {this_weeks_folder_path=}")
+   if not this_weeks_folder_id:
+      print(f"Quitting: The folder for {gdrive_folder_path_list} does not exist.")
+      exit()
+
    # if not run at 12, must be testing
-   if datetime.now().hour != 12:
+   if now.hour != 12:
       test_mode = True
       print("Using test mode which skips printing")
    else:
       test_mode = False
+
+   try:
+      pantrysoft_token = load_token("my-pantrysoft_token.json")
+   except:
+      print("Quitting: PantrySoft token failed to load.")
+      exit()
 
    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
    files_to_print = []
@@ -115,7 +131,7 @@ if __name__ == "__main__":
    else:
       with open(TEMPORARY_GUEST_VISIT_LIST_FILENAME, "r") as fp:
          guest_visit_lists = json.load(fp)
-      print(f'Using saved guest file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
+      print(f'Using saved visits file {TEMPORARY_GUEST_VISIT_LIST_FILENAME}', flush=True)
 
    # some deliveries are picked-up at a certain time, so move them from deliveries to pickup:
    modified_guest_visit_lists = move_delivery_to_pickup(guest_visit_lists,[('Quak','03:45')])
@@ -127,6 +143,9 @@ if __name__ == "__main__":
          guest_list.sort(key=lambda x: (x[2], x[3]))  #sort by time and last_name for the pickup report
 
    write_csv(modified_guest_visit_lists, LOCAL_FOLDER_PATH, f'_{this_weeks_dates[0][-5:]}.csv', client_info_dict)
+
+   delivery_tally_csv_filename = f'Delivery_Tally-{this_weeks_dates[0][-5:]}.csv'
+   write_delivery_tally_csv(modified_guest_visit_lists[GUEST_LIST_IDX_E.Delivery.value], LOCAL_FOLDER_PATH, delivery_tally_csv_filename)
 
    delivery_pdf_filename = f'Deliveries_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_1column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_pdf_filename, client_info_dict, this_weeks_dates)
@@ -140,9 +159,6 @@ if __name__ == "__main__":
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
       client_info_dict, this_weeks_dates, ["01", "04", "08", "09", "20"])
    files_to_print.append((delivery_routes_pdf_filename,1))
-
-   delivery_tally_csv_filename = f'Delivery_Tally-{this_weeks_dates[0][-5:]}.csv'
-   write_delivery_tally_csv(modified_guest_visit_lists[GUEST_LIST_IDX_E.Delivery.value], LOCAL_FOLDER_PATH, delivery_tally_csv_filename)
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
@@ -167,19 +183,8 @@ if __name__ == "__main__":
          report_file.write(line + "\n")
 
    # report generation done, now upload to google drive
-   if 0:
-      print('Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/20xx/Tags: ', end="", flush=True)
-      SHARED_FOLDER_ID = '1EI9SuqrfZw2rwTKc0Wqw-Ks9uUxDc4P2'  # Target shared folder ID from Drive URL (Tags folder)
-      new_folder_name = datetime.today().strftime('%B-%d-tags') #full month name, day
-   print('Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/2026/August: ', end="", flush=True)
-   # SHARED_FOLDER_ID = '1uaFGOFn-vurpxopHeiQYmLEIfT1vy-XS'
-   # !TODO: add folder walk to determine if folder exists
-   SHARED_FOLDER_ID = '18jL0tBQAZgKqfNI1kCulbPAYkNYYC22D' #/2026/August/Aug 21
-   new_folder_name = datetime.today().strftime('%b-%d') #3-letter month name, day
-   if test_mode:
-      new_folder_name += '-test'
-   # upload_folder(LOCAL_FOLDER_PATH, SHARED_FOLDER_ID, new_folder_name) # create folder and upload
-   upload_folder(LOCAL_FOLDER_PATH, SHARED_FOLDER_ID) # upload to folder
+   print(f"Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/{this_weeks_folder_path}: ", end=None, flush=True)
+   upload_folder(LOCAL_FOLDER_PATH, this_weeks_folder_id)
 
    # now print
    for file_copies_tuple in files_to_print:
