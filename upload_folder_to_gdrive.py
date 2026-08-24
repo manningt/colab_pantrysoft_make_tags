@@ -113,6 +113,7 @@ def upload_folder(local_folder_path, shared_folder_id, created_folder_name = Non
 def get_folder_id(top_level_shared_folder, date_list, create_if_not_present=False):
     # date_list = ["2027", "February", "05"]
     folder_path = ""
+    created_folder_list = []
     if len(date_list) == 3:
         folder_id = top_level_shared_folder    
         for i in range(3):
@@ -145,10 +146,19 @@ def get_folder_id(top_level_shared_folder, date_list, create_if_not_present=Fals
                     if i < 2:
                         folder_name_to_create = date_list[i]
                     else:
-                        folder_name_to_create = f"{date_list[1][:3]} {int(date_list[2])}"
-                    # print(f"Creating {folder_name_to_create}")
+                        if date_list[1].startswith("Sep") or date_list[1].startswith("Ju"):
+                            characters_in_month_name = 4
+                        else:
+                            characters_in_month_name = 3
+                        folder_name_to_create = f"{date_list[1][:characters_in_month_name]} {int(date_list[2])}"
                     folder_id = create_drive_folder(service, folder_name_to_create, higher_level_folder_id)
-                    folder_path += f"{folder_name_to_create}/"
+                    if folder_id:
+                        folder_path += f"{folder_name_to_create}/"
+                        created_folder_list.append(folder_name_to_create)
+                        # print(f"Created {folder_name_to_create}", end = "")
+                    else:
+                        print(f"Failed to create: {folder_name_to_create}")
+                        break
                 else:
                     print(f"Did not find folder for {date_list[i]} when searching for date: {date_list}")
                     break
@@ -156,7 +166,7 @@ def get_folder_id(top_level_shared_folder, date_list, create_if_not_present=Fals
         print(f"Bad date list: {date_list}")
         folder_id = None
 
-    return folder_id, folder_path
+    return folder_id, folder_path, created_folder_list
 
 
 def list_folder_contents(folder_id: str):
@@ -228,13 +238,16 @@ if __name__ == '__main__':
 
     TEST_CREATE_DATE_FOLDER = True
     if TEST_CREATE_DATE_FOLDER:
-        date_list = ["2027", "March", "05"]
-        this_weeks_folder_id, folder_path = \
+        date_list = ["2027", "September", "24"]
+        this_weeks_folder_id, folder_path, created_folder_list = \
             get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, date_list, create_if_not_present=True)
-        if not this_weeks_folder_id:
-            print('error: this weeks folder not found')
+        if this_weeks_folder_id:
+            if len(created_folder_list):
+                print(f"Made folders: {", ".join(created_folder_list)}")
+            else:
+                print(f"Folders for {"-".join(date_list)} already exist.")
         else:
-            print(f'{folder_path=} {this_weeks_folder_id=}')
+            print(f"Failed to make folder for {"-".join(date_list)}")
 
 
     TEST_GET_FOLDER_ID_WITHOUT_CREATE = False
