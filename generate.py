@@ -70,7 +70,7 @@ if __name__ == "__main__":
    gdrive_folder_path_list = this_weeks_dates[0].split("-")
    gdrive_folder_path_list[1] = month_name[int(gdrive_folder_path_list[1])] #get name from month number
    PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'
-   this_weeks_folder_id, this_weeks_folder_path = \
+   this_weeks_folder_id, this_weeks_folder_path, created_folder_list = \
       get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, gdrive_folder_path_list)
    # print(f"{this_weeks_folder_id=} {this_weeks_folder_path=}")
    if not this_weeks_folder_id:
