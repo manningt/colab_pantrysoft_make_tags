@@ -547,13 +547,13 @@ def write_delivery_routes_pdf(guest_list_list, output_directory, expeditor_pdf_f
       guest_list_page_number = 0
       # page_count = (len(guest_list_list[g_l_index]) // (number_of_rows_on_a_page)) + 1
       # print(f"\t{g_l_index=} {GUEST_LIST_IDX_E(g_l_index).name} has {len(guest_list_list[g_l_index])} guests; will generate {page_count} pages")
-      current_route = "XX"
-      route_guest_count = 0
+      current_route_prefix = None
       try:
          while current_row < len(guest_list_list[g_l_index]):
             this_route = guest_list_list[g_l_index][current_row][3]
-            if this_route[:2] in routes_to_print and this_route[:2] != current_route[:2]:
-               current_route = this_route
+            this_route_prefix = this_route.split("-")[0].strip().lower()
+            if this_route_prefix in routes_to_print and this_route_prefix != current_route_prefix:
+               current_route_prefix = this_route_prefix
                pdf.add_page()
                guest_list_page_number += 1
                pdf.set_font("Helvetica", "B", size=11)
@@ -584,25 +584,20 @@ def write_delivery_routes_pdf(guest_list_list, output_directory, expeditor_pdf_f
                      pdf_table_row.cell(unit)
                      pdf_table_row.cell(phone)
 
-                     route_guest_count += 1
-                     # if current_row < 38:
-                     #    print(f'{current_row} ', end='')
                      current_row += 1
-                     if guest_list_list[g_l_index][current_row][3][:2] != current_route[:2]:
+                     next_route = guest_list_list[g_l_index][current_row][3]
+                     next_route_prefix = next_route.split("-")[0].strip().lower()
                         #leave loop if the route changes
-                        # print(f'\n{current_route=} had {route_guest_count} guests - next route is {guest_list_list[g_l_index][current_row][3]}')
+                     if next_route_prefix != current_route_prefix:
                         guest_list_page_number = 0
                         break
                      if current_row >= len(guest_list_list[g_l_index]):
                         # print(f"\t  End of guest list reached at {current_row=}.")
                         break
-                     # the following has to be here to avoid skipping over indexes because there is an increment outside the with
-               # need to adjust current_row at the end of a table NOT SURE WHY
-               current_row -= 1
-               route_guest_count = 0
+               current_row -= 1 #go back one if starting a new page 
             else:
                current_row += 1
-               current_route = "YY"
+               current_route_prefix = None
 
                
       except Exception as e:
