@@ -60,7 +60,7 @@ if __name__ == "__main__":
 
    # if run autonomously, check that it's Thursday
    if now.weekday() != 3:
-      this_weeks_dates = ["2026-08-21", "2026-08-22"]
+      this_weeks_dates = ["2026-08-28", "2026-08-29"]
       print(f'\tWarning: using hardcoded dates: {this_weeks_dates}')
    else:
       Fridays_date = now + timedelta(days=1)
@@ -156,8 +156,10 @@ if __name__ == "__main__":
    files_to_print.append((pickup_pdf_filename,1))
 
    delivery_routes_pdf_filename = f'Deliveries_per_route_{this_weeks_dates[0][-5:]}.pdf'
+   # the following list is case sensitive, e.g. 07A should be 07a
+   delivery_routes_to_print = ["01", "04", "08", "09", "20"]
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
-      client_info_dict, this_weeks_dates, ["01", "04", "08", "09", "20"])
+      client_info_dict, this_weeks_dates, delivery_routes_to_print)
    files_to_print.append((delivery_routes_pdf_filename,1))
 
    status_strings = []
