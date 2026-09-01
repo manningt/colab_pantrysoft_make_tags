@@ -91,6 +91,7 @@ if __name__ == "__main__":
       exit()
 
    LOCAL_FOLDER_PATH = './output_files'  # Path to local folder which contains the report & tag PDFs that will be uploaded to the google drive
+   COVER_PAGES_FOLDER_PATH = './cover-pages'
    files_to_print = []
 
    TEMPORARY_CLIENT_LIST_FILENAME = "my-guests.json"
@@ -149,18 +150,21 @@ if __name__ == "__main__":
 
    delivery_pdf_filename = f'Deliveries_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_1column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_pdf_filename, client_info_dict, this_weeks_dates)
-   files_to_print.append((delivery_pdf_filename,1)) #filename & copies tuple
+   files_to_print.append(("./cover-pages/cover-Delivery-expeditor.pdf",1))
+   files_to_print.append((os.path.join(LOCAL_FOLDER_PATH, delivery_pdf_filename),1)) #filename & copies tuple
 
    pickup_pdf_filename = f'Pickups_{this_weeks_dates[0][-5:]}.pdf'
    write_expeditor_2column_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, pickup_pdf_filename, client_info_dict, this_weeks_dates)
-   files_to_print.append((pickup_pdf_filename,1))
+   files_to_print.append(("./cover-pages/cover-Pickup-expeditor.pdf",1))
+   files_to_print.append((os.path.join(LOCAL_FOLDER_PATH, pickup_pdf_filename),1))
 
    delivery_routes_pdf_filename = f'Deliveries_per_route_{this_weeks_dates[0][-5:]}.pdf'
    # the following list is case sensitive, e.g. 07A should be 07a
    delivery_routes_to_print = ["01", "04", "08", "09", "20"]
    write_delivery_routes_pdf(modified_guest_visit_lists, LOCAL_FOLDER_PATH, delivery_routes_pdf_filename, \
       client_info_dict, this_weeks_dates, delivery_routes_to_print)
-   files_to_print.append((delivery_routes_pdf_filename,1))
+   files_to_print.append(("./cover-pages/cover-Deliveries-per-route.pdf",1))
+   files_to_print.append((os.path.join(LOCAL_FOLDER_PATH, delivery_routes_pdf_filename),1))
 
    status_strings = []
    for list_idx, guest_list in enumerate(guest_visit_lists):
@@ -177,7 +181,8 @@ if __name__ == "__main__":
 
    TAG_PDF_REPORT_FILENAME = 'list-of-guests-in-tag-pdf-files.pdf'
    write_tag_report_pdf(guest_visit_lists, status_strings, LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME, client_info_dict)
-   files_to_print.append((TAG_PDF_REPORT_FILENAME,1))
+   files_to_print.append(("./cover-pages/cover-Tags-summary.pdf",1))
+   files_to_print.append((os.path.join(LOCAL_FOLDER_PATH, TAG_PDF_REPORT_FILENAME),1))
 
    text_report_path = os.path.join(LOCAL_FOLDER_PATH, "make_tags_report.txt")
    with open(text_report_path, "w") as report_file:
@@ -194,4 +199,4 @@ if __name__ == "__main__":
          print(f'Test mode: skipping printing of {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
       else:
          print(f'Printing {file_copies_tuple[1]} copies of {file_copies_tuple[0]}')
-         print_file(os.path.join(LOCAL_FOLDER_PATH, file_copies_tuple[0]), copies=file_copies_tuple[1])
+         print_file(file_copies_tuple[0], copies=file_copies_tuple[1])
