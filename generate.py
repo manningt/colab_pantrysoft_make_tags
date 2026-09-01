@@ -67,16 +67,6 @@ if __name__ == "__main__":
       Saturdays_date = now + timedelta(days=2)
       this_weeks_dates = [Fridays_date.strftime('%Y-%m-%d'), Saturdays_date.strftime('%Y-%m-%d')]
 
-   gdrive_folder_path_list = this_weeks_dates[0].split("-")
-   gdrive_folder_path_list[1] = month_name[int(gdrive_folder_path_list[1])] #get name from month number
-   PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz'
-   this_weeks_folder_id, this_weeks_folder_path, created_folder_list = \
-      get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, gdrive_folder_path_list)
-   # print(f"{this_weeks_folder_id=} {this_weeks_folder_path=}")
-   if not this_weeks_folder_id:
-      print(f"Quitting: The folder for {gdrive_folder_path_list} does not exist.")
-      exit()
-
    # if not run at 12, must be testing
    if now.hour != 12:
       test_mode = True
@@ -190,8 +180,23 @@ if __name__ == "__main__":
          report_file.write(line + "\n")
 
    # report generation done, now upload to google drive
-   print(f"Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/{this_weeks_folder_path}: ", end=None, flush=True)
-   upload_folder(LOCAL_FOLDER_PATH, this_weeks_folder_id)
+   gdrive_folder_path_list = this_weeks_dates[0].split("-")
+   gdrive_folder_path_list[1] = month_name[int(gdrive_folder_path_list[1])] #get name from month number
+   # print(f"{gdrive_folder_path_list=}") -> gdrive_folder_path_list=['2026', 'August', '28']
+   PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID = '1qusUE0OHeK7-i-Tu647dsQJ7nC12uVVz' # Shared Drive folder: Newbury Food Pantry > PANTRYSOFT ORDER DOCUMENTS
+   this_weeks_folder_id = None
+   try:
+      this_weeks_folder_id, this_weeks_folder_path, created_folder_list = \
+         get_folder_id(PANTRYSOFT_ORDER_DOCUMENTS_FOLDER_ID, gdrive_folder_path_list)
+   except Exception as e:
+      print(f"An error occurred when getting the gdrive folder for uploading: {e}")
+
+   if not this_weeks_folder_id:
+      print(f"Not uploading the PDFs: The folder for {gdrive_folder_path_list} does not exist.")
+   else:
+      # print(f"{this_weeks_folder_id=} {this_weeks_folder_path=}")
+      print(f"Uploading generated files to /Newbury Food Pantry/PANTRYSOFT ORDER DOCUMENTS/{this_weeks_folder_path}: ", end=None, flush=True)
+      upload_folder(LOCAL_FOLDER_PATH, this_weeks_folder_id)
 
    # now print
    for file_copies_tuple in files_to_print:
